@@ -78,8 +78,8 @@ async def run_full_pipeline(transcript_text: str, participants: list, participan
             "explicit": len([d for d in decisions if d.get("decision_type") == "explicit"]),
             "assignments": len([d for d in decisions if d.get("decision_type") == "assignment"]),
             "items": [
-                {"type": d.get("decision_type"), "description": (d.get("description") or "")[:80]}
-                for d in decisions[:5]
+                {"type": d.get("decision_type"), "description": (d.get("description") or "")[:120]}
+                for d in decisions[:10]
             ]
         }
     })

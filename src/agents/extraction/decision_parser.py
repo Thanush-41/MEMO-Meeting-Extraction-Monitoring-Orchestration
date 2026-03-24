@@ -78,14 +78,27 @@ class DecisionExtractor(BaseAgent[DecisionExtractionInput]):
             )
         )
         
-        # Decision indicator patterns
+        # Decision indicator patterns (sentence-level)
         self._explicit_patterns = [
-            (r"(?:we|let's|i)\s+(?:decided?|agree[d]?)\s+(?:to|that)\s+(.+?)(?:\.|$)", "explicit"),
-            (r"(?:the\s+)?decision\s+(?:is|was)\s+(?:to|that)\s+(.+?)(?:\.|$)", "explicit"),
-            (r"(?:we're|we\s+are)\s+going\s+(?:to|with)\s+(.+?)(?:\.|$)", "explicit"),
-            (r"(?:approved?|approve[d]?)\s+(?:the|to)\s+(.+?)(?:\.|$)", "approval"),
-            (r"(?:rejected?|reject[ed]?|declined?)\s+(?:the|to)\s+(.+?)(?:\.|$)", "rejection"),
-            (r"(?:postponed?|defer(?:red)?|tabled?)\s+(?:the|to)\s+(.+?)(?:\.|$)", "deferral"),
+            # Explicit "Decision:" / "Decision made" headers — very common in business transcripts
+            (r"[Dd]ecision(?:\s+(?:made|reached|is|was))?[:\s\u2014\u2013\-]+(.+?)(?:\.|$)", "explicit"),
+            # Agreed / decided
+            (r"(?:we|i|let'?s)\s+(?:decided?|agreed?|resolved?|concluded?)\s+(?:to|that)\s+(.+?)(?:\.|$)", "explicit"),
+            (r"(?:the\s+)?decision\s+(?:is|was|has\s+been)\s+(?:made\b|to|that)?\s*(.+?)(?:\.|$)", "explicit"),
+            # Switching / adopting
+            (r"(?:we'?re?|we\s+are)\s+(?:going|switching|moving|changing|adopting|choosing)\s+(?:to|with|ahead\s+with)\s+(.+?)(?:\.|$)", "explicit"),
+            (r"(?:let'?s|we\s+will|we'll)\s+go\s+(?:with|ahead\s+with)\s+(.+?)(?:\.|$)", "explicit"),
+            # Approvals / rejections / deferrals (anchored to sentence start to avoid past-tense confessions)
+            (r"^(?:approved?|approve[d]?)[.!\s]+(?:the\s+|to\s+|that\s+|for\s+)(.{8,120})(?:\.|$)", "approval"),
+            (r"(?:rejected?|reject(?:ed)?|declined?)\s+(?:the\s+|to\s+|that\s+)?(.+?)(?:\.|$)", "rejection"),
+            (r"(?:postponed?|defer(?:red)?|tabled?)\s+(?:the\s+|to\s+|that\s+)?(.+?)(?:\.|$)", "deferral"),
+            # Policy / mandate declarations (capture full phrase including keyword)
+            (r"((?:code|feature|deployment)\s+freeze\s+.{5,100})(?:\.|$)", "policy"),
+            (r"(?:effective\s+immediately|from\s+now\s+on|starting\s+(?:now|immediately|monday|today))[,:\s]+(.{10,120})(?:\.|$)", "policy"),
+            # Ship / release date decisions
+            (r"(?:ships?|releases?|launches?|goes?\s+live)\s+(?:on\s+)?(?:May|June|July|August|September|October|November|December|January|February|March|April|\d+)\s*(.{0,60})(?:\.|$)", "explicit"),
+            # Mandate / require
+            (r"(?:mandatory|required?|must\s+be|will\s+be\s+(?:required|mandatory))\s+(.{10,120})(?:\.|$)", "policy"),
         ]
         
         self._assignment_patterns = [
@@ -96,7 +109,7 @@ class DecisionExtractor(BaseAgent[DecisionExtractionInput]):
         
         self._consensus_indicators = [
             "everyone agrees", "all agreed", "consensus", "unanimous",
-            "no objections", "sounds good to everyone", "all in favor"
+            "no objections", "sounds good to everyone", "all in favor",
         ]
         
         self._condition_patterns = [
@@ -125,7 +138,7 @@ class DecisionExtractor(BaseAgent[DecisionExtractionInput]):
             decisions = []
             decision_id = 0
             
-            # Process each segment looking for decisions
+            # Process each segment sentence-by-sentence for better pattern matching
             for i, segment in enumerate(segments):
                 text = segment.get("text", "")
                 speaker = segment.get("speaker", "Unknown")
@@ -133,48 +146,60 @@ class DecisionExtractor(BaseAgent[DecisionExtractionInput]):
                 # Get context (surrounding segments)
                 context_text = self._get_context(segments, i)
                 
-                # Extract explicit decisions
-                for pattern, decision_type in self._explicit_patterns:
-                    matches = re.finditer(pattern, text, re.IGNORECASE)
-                    for match in matches:
-                        decision_id += 1
-                        decision = self._create_decision(
-                            decision_id=f"DEC-{decision_id:03d}",
-                            description=match.group(1).strip(),
-                            decision_type=decision_type,
-                            speaker=speaker,
-                            context=context_text,
-                            full_text=text,
-                            participant_roles=input_data.participant_roles
-                        )
-                        decisions.append(decision)
+                # Split into sentences so patterns don't bleed across unrelated statements
+                sentences = re.split(r'(?<=[.!?])\s+', text)
+                if not sentences:
+                    sentences = [text]
                 
-                # Extract assignments
-                for pattern, decision_type in self._assignment_patterns:
-                    matches = re.finditer(pattern, text)
-                    for match in matches:
-                        decision_id += 1
-                        assignee = match.group(1)
-                        task = match.group(2)
-                        decision = Decision(
-                            id=f"DEC-{decision_id:03d}",
-                            description=f"Assigned to {assignee}: {task}",
-                            decision_type="assignment",
-                            made_by=[speaker],
-                            impacted_parties=[assignee],
-                            context=context_text,
-                            confidence=0.7,
-                            requires_follow_up=True,
-                            follow_up_notes=f"Track completion by {assignee}"
-                        )
-                        decisions.append(decision)
+                for sentence in sentences:
+                    sentence = sentence.strip()
+                    if len(sentence) < 8:
+                        continue
+                    
+                    # Extract explicit decisions (per sentence)
+                    for pattern, decision_type in self._explicit_patterns:
+                        matches = re.finditer(pattern, sentence, re.IGNORECASE | re.MULTILINE)
+                        for match in matches:
+                            raw = match.group(1).strip() if match.lastindex and match.group(1) else sentence.strip()
+                            if len(raw) < 5:
+                                raw = sentence.strip()
+                            decision_id += 1
+                            decision = self._create_decision(
+                                decision_id=f"DEC-{decision_id:03d}",
+                                description=raw[:150],
+                                decision_type=decision_type,
+                                speaker=speaker,
+                                context=context_text,
+                                full_text=sentence,
+                                participant_roles=input_data.participant_roles
+                            )
+                            decisions.append(decision)
+                    
+                    # Extract assignments
+                    for pattern, _ in self._assignment_patterns:
+                        matches = re.finditer(pattern, sentence)
+                        for match in matches:
+                            decision_id += 1
+                            assignee = match.group(1)
+                            task = match.group(2) if match.lastindex >= 2 else sentence
+                            decision = Decision(
+                                id=f"DEC-{decision_id:03d}",
+                                description=f"Assigned to {assignee}: {task[:100]}",
+                                decision_type="assignment",
+                                made_by=[speaker],
+                                impacted_parties=[assignee],
+                                context=context_text,
+                                confidence=0.7,
+                                requires_follow_up=True,
+                                follow_up_notes=f"Track completion by {assignee}"
+                            )
+                            decisions.append(decision)
                 
-                # Check for consensus decisions
+                # Check for consensus decisions (full segment)
                 text_lower = text.lower()
                 for indicator in self._consensus_indicators:
                     if indicator in text_lower:
                         decision_id += 1
-                        # Find what was agreed to
                         agreed_topic = self._extract_agreed_topic(segments, i)
                         if agreed_topic:
                             decision = Decision(
@@ -329,6 +354,10 @@ class DecisionExtractor(BaseAgent[DecisionExtractionInput]):
         seen_descriptions = set()
         
         for decision in decisions:
+            # Drop descriptions that are too short to be meaningful
+            if len(decision.description.strip()) < 25:
+                continue
+            
             # Normalize description
             normalized = decision.description.lower().strip()
             words = set(normalized.split())
@@ -338,7 +367,7 @@ class DecisionExtractor(BaseAgent[DecisionExtractionInput]):
             for seen in seen_descriptions:
                 seen_words = set(seen.split())
                 overlap = len(words & seen_words) / max(len(words), 1)
-                if overlap > 0.7:  # 70% word overlap
+                if overlap > 0.55:  # 55% word overlap — catches paraphrases
                     is_duplicate = True
                     break
             
