@@ -3,7 +3,16 @@
   "framework": null,
   "buildCommand": "",
   "outputDirectory": "dashboard",
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+  "functions": {
+    "api/process.py": { "runtime": "python3.12", "maxDuration": 30 }
+  },
+  "routes": [
+    {
+      "src": "/api/process",
+      "dest": "/api/process.py",
+      "methods": ["POST", "OPTIONS"]
+    },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
+

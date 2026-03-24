@@ -1189,7 +1189,20 @@ Account Manager — Lisa Fernandez: We're off to a great start. Looking forward 
     log('info', `Workflow started — Processing: "${tx.title}"`);
     log('info', `Participants: ${tx.speakers.join(', ')}`);
 
-    for (const step of steps) {
+    // Fire real API call in parallel with animation
+    const apiPromise = fetch('/api/process', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        transcript: tx.text,
+        participants: tx.speakers,
+        participant_roles: {}
+      })
+    }).then(r => r.json()).catch(() => null);
+
+    // Animate agents step-by-step
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i];
       setAgent(step.id, 'run', 'Running…');
       log('info', `→ ${step.name} started`);
       await delay(Math.round(step.duration));
@@ -1198,11 +1211,49 @@ Account Manager — Lisa Fernandez: We're off to a great start. Looking forward 
     }
 
     const elapsed = ((Date.now() - start) / 1000).toFixed(2);
-    log('success', `Workflow complete in ${elapsed}s — ${tx.decisions} decisions, ${tx.actions} action items, audit trail persisted`);
 
-    document.getElementById('sim-decisions').textContent = tx.decisions;
-    document.getElementById('sim-actions').textContent = tx.actions;
-    document.getElementById('sim-time').textContent = elapsed + 's';
+    // Await real results
+    const api = await apiPromise;
+
+    if (api && api.summary) {
+      const s = api.summary;
+      const pc = s.priority_counts || {};
+
+      log('decision', `📋 Real agent results:`);
+      log('info',     `   Speakers detected: ${s.speakers}`);
+      log('info',     `   Decisions found: ${s.decisions}`);
+      log('info',     `   Action items: ${s.action_items} (${s.assigned} assigned, ${s.with_deadlines} with deadlines)`);
+      log('info',     `   Priorities — P0:${pc.P0||0} P1:${pc.P1||0} P2:${pc.P2||0} P3:${pc.P3||0}`);
+      if (s.escalations > 0) log('warn', `   ⚠ ${s.escalations} escalation(s) triggered`);
+
+      // Populate result cards
+      document.getElementById('sim-decisions').textContent = s.decisions;
+      document.getElementById('sim-actions').textContent   = s.action_items;
+
+      // Show real action items in a table below
+      if (s.top_action_items && s.top_action_items.length > 0) {
+        let rows = s.top_action_items.map(i =>
+          `<tr><td>${i.title}</td><td>${i.assignee||'Unassigned'}</td><td>${i.urgency}</td><td>${i.deadline||'—'}</td></tr>`
+        ).join('');
+        const existing = document.getElementById('real-results-table');
+        if (existing) existing.remove();
+        const tbl = `<div id="real-results-table" class="card" style="margin-top:16px">
+          <div class="section-title"><span class="dot" style="background:#3fb950"></span>Live Agent Output — Action Items</div>
+          <table class="data-table"><thead><tr><th>Task</th><th>Owner</th><th>Urgency</th><th>Deadline</th></tr></thead>
+          <tbody>${rows}</tbody></table></div>`;
+        document.getElementById('page-pipeline').insertAdjacentHTML('beforeend', tbl);
+      }
+
+      log('success', `✓ Workflow complete in ${elapsed}s — real data from MEMO agents`);
+    } else {
+      // fallback to transcript metadata if API unavailable
+      log('warn', `API unavailable — showing estimated results from transcript metadata`);
+      document.getElementById('sim-decisions').textContent = tx.decisions;
+      document.getElementById('sim-actions').textContent   = tx.actions;
+      log('success', `Workflow complete in ${elapsed}s — audit trail persisted`);
+    }
+
+    document.getElementById('sim-time').textContent   = elapsed + 's';
     document.getElementById('run-status').textContent = `✓ Completed in ${elapsed}s`;
 
     btn.disabled = false;
