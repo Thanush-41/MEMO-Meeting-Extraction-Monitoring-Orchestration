@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MEMO — Meeting Extraction, Monitoring &amp; Orchestration</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #1c2330;
+      --border: #30363d;
+      --accent: #58a6ff;
+      --accent2: #3fb950;
+      --warn: #e3b341;
+      --error: #f85149;
+      --purple: #bc8cff;
+      --text: #e6edf3;
+      --muted: #7d8590;
+      --radius: 10px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; }
+
+    /* ── TOP NAV ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 28px;
+      display: flex; align-items: center; gap: 14px;
+      position: sticky; top: 0; z-index: 100;
+    }
+    header .logo { font-size: 18px; font-weight: 700; color: var(--accent); letter-spacing: -0.4px; }
+    header .subtitle { color: var(--muted); font-size: 12px; }
+    header .badge {
+      margin-left: auto; background: rgba(63,185,80,.15);
+      color: var(--accent2); border: 1px solid rgba(63,185,80,.4);
+      border-radius: 20px; padding: 3px 12px; font-size: 11px; font-weight: 600;
+    }
+    .nav-tabs { display: flex; gap: 4px; margin-left: 32px; }
+    .nav-tabs button {
+      background: none; border: none; color: var(--muted);
+      padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px;
+      transition: all .15s;
+    }
+    .nav-tabs button.active, .nav-tabs button:hover { background: var(--surface2); color: var(--text); }
+    .nav-tabs button.active { color: var(--accent); }
+
+    /* ── LAYOUT ── */
+    .page { display: none; padding: 24px 28px; max-width: 1400px; margin: 0 auto; }
+    .page.active { display: block; }
+
+    /* ── GRID ── */
+    .grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 24px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 18px;
+    }
+    .card-title {
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: .8px; color: var(--muted); margin-bottom: 10px;
+    }
+    .card-value { font-size: 32px; font-weight: 700; line-height: 1; }
+    .card-sub { font-size: 12px; color: var(--muted); margin-top: 5px; }
+    .card-value.green { color: var(--accent2); }
+    .card-value.blue  { color: var(--accent); }
+    .card-value.yellow{ color: var(--warn); }
+    .card-value.red   { color: var(--error); }
+
+    /* ── SECTION TITLE ── */
+    .section-title {
+      font-size: 15px; font-weight: 600; margin-bottom: 14px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .section-title .dot {
+      width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+    }
+
+    /* ── PIPELINE FLOW ── */
+    .pipeline {
+      display: flex; align-items: center; gap: 0;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 22px 28px;
+      margin-bottom: 24px; overflow-x: auto;
+    }
+    .pipeline-step {
+      display: flex; flex-direction: column; align-items: center;
+      min-width: 110px; position: relative;
+    }
+    .pipeline-step .icon {
+      width: 52px; height: 52px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; margin-bottom: 8px;
+      border: 2px solid transparent;
+      transition: all .3s;
+    }
+    .pipeline-step .step-name { font-size: 11px; font-weight: 600; text-align: center; color: var(--text); }
+    .pipeline-step .step-sub  { font-size: 10px; color: var(--muted); text-align: center; margin-top: 2px; }
+    .pipeline-step .step-status {
+      font-size: 10px; margin-top: 5px; padding: 2px 8px;
+      border-radius: 10px; font-weight: 600;
+    }
+    .pipeline-arrow {
+      color: var(--border); font-size: 20px; padding: 0 4px;
+      flex-shrink: 0; margin-bottom: 32px;
+    }
+
+    /* agent state colours */
+    .agent-idle   .icon { background: var(--surface2); border-color: var(--border); color: var(--muted); }
+    .agent-run    .icon { background: rgba(88,166,255,.12); border-color: var(--accent); color: var(--accent); animation: pulse 1.4s infinite; }
+    .agent-done   .icon { background: rgba(63,185,80,.12); border-color: var(--accent2); color: var(--accent2); }
+    .agent-error  .icon { background: rgba(248,81,73,.12); border-color: var(--error); color: var(--error); }
+    .agent-idle   .step-status { background: rgba(125,133,144,.1); color: var(--muted); }
+    .agent-run    .step-status { background: rgba(88,166,255,.15); color: var(--accent); }
+    .agent-done   .step-status { background: rgba(63,185,80,.15); color: var(--accent2); }
+    .agent-error  .step-status { background: rgba(248,81,73,.15); color: var(--error); }
+
+    @keyframes pulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(88,166,255,.4); }
+      50%      { box-shadow: 0 0 0 8px rgba(88,166,255,0); }
+    }
+
+    /* ── LIVE LOG ── */
+    .log-box {
+      background: #010409; border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 16px;
+      font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 12px;
+      height: 240px; overflow-y: auto; margin-bottom: 24px;
+    }
+    .log-entry { padding: 2px 0; line-height: 1.7; }
+    .log-entry .ts { color: var(--muted); }
+    .log-entry .tag { font-weight: 700; padding: 1px 6px; border-radius: 4px; margin: 0 4px; font-size: 10px; }
+    .log-entry .tag.info    { background: rgba(88,166,255,.2);  color: var(--accent); }
+    .log-entry .tag.success { background: rgba(63,185,80,.2);   color: var(--accent2); }
+    .log-entry .tag.warn    { background: rgba(227,179,65,.2);  color: var(--warn); }
+    .log-entry .tag.error   { background: rgba(248,81,73,.2);   color: var(--error); }
+    .log-entry .tag.decision{ background: rgba(188,140,255,.2); color: var(--purple); }
+    .log-entry .msg { color: var(--text); }
+
+    /* ── PROGRESS BARS ── */
+    .progress-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .progress-label { min-width: 130px; font-size: 12px; color: var(--muted); }
+    .progress-bar { flex: 1; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
+    .progress-val { min-width: 36px; text-align: right; font-size: 12px; font-weight: 600; }
+
+    /* ── TABLE ── */
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th {
+      text-align: left; padding: 10px 12px; font-size: 11px;
+      text-transform: uppercase; letter-spacing: .6px; color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+    .data-table td { padding: 10px 12px; border-bottom: 1px solid rgba(48,54,61,.5); font-size: 13px; }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: var(--surface2); }
+
+    /* ── PRIORITY BADGE ── */
+    .badge-p0 { background: rgba(248,81,73,.2);  color: #f85149; border: 1px solid rgba(248,81,73,.4);  padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+    .badge-p1 { background: rgba(227,179,65,.2); color: #e3b341; border: 1px solid rgba(227,179,65,.4); padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+    .badge-p2 { background: rgba(88,166,255,.2); color: #58a6ff; border: 1px solid rgba(88,166,255,.4); padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+    .badge-p3 { background: rgba(63,185,80,.15); color: #3fb950; border: 1px solid rgba(63,185,80,.3);  padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+    .badge-ok { background: rgba(63,185,80,.15); color: #3fb950; padding: 2px 10px; border-radius: 10px; font-size: 11px; }
+    .badge-warn { background: rgba(227,179,65,.15); color: #e3b341; padding: 2px 10px; border-radius: 10px; font-size: 11px; }
+    .badge-err  { background: rgba(248,81,73,.15);  color: #f85149; padding: 2px 10px; border-radius: 10px; font-size: 11px; }
+
+    /* ── CIRCUIT BREAKER ── */
+    .cb-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+    .cb-card {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 14px; text-align: center;
+    }
+    .cb-card .cb-name { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+    .cb-card .cb-state {
+      font-size: 13px; font-weight: 700; padding: 4px 12px;
+      border-radius: 12px; display: inline-block;
+    }
+    .cb-closed { background: rgba(63,185,80,.15); color: var(--accent2); }
+    .cb-open   { background: rgba(248,81,73,.15);  color: var(--error); }
+    .cb-half   { background: rgba(227,179,65,.15); color: var(--warn); }
+    .cb-card .cb-count { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+    /* ── TEST RESULTS ── */
+    .test-suite { margin-bottom: 14px; }
+    .test-suite-name {
+      font-size: 12px; font-weight: 600; color: var(--muted);
+      padding: 6px 0; border-bottom: 1px solid var(--border); margin-bottom: 6px;
+    }
+    .test-row { display: flex; align-items: center; gap: 10px; padding: 5px 8px; border-radius: 6px; transition: background .15s; }
+    .test-row:hover { background: var(--surface2); }
+    .test-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .test-dot.pass { background: var(--accent2); }
+    .test-dot.fail { background: var(--error); }
+    .test-name { flex: 1; font-size: 12px; }
+    .test-time { font-size: 11px; color: var(--muted); }
+    .test-badge-pass { background: rgba(63,185,80,.15); color: var(--accent2); font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 8px; }
+    .test-badge-fail { background: rgba(248,81,73,.15);  color: var(--error);   font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 8px; }
+
+    /* ── AUDIT TIMELINE ── */
+    .timeline { position: relative; padding-left: 24px; }
+    .timeline::before { content:''; position:absolute; left:7px; top:0; bottom:0; width:2px; background: var(--border); }
+    .tl-item { position: relative; margin-bottom: 16px; }
+    .tl-item::before {
+      content:''; position:absolute; left:-21px; top:4px;
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--accent); border: 2px solid var(--bg);
+    }
+    .tl-item.tl-decision::before { background: var(--purple); }
+    .tl-item.tl-warn::before    { background: var(--warn); }
+    .tl-item.tl-error::before   { background: var(--error); }
+    .tl-time { font-size: 10px; color: var(--muted); margin-bottom: 2px; }
+    .tl-title { font-size: 13px; font-weight: 600; }
+    .tl-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .tl-confidence {
+      display: inline-block; margin-top: 4px;
+      font-size: 10px; color: var(--accent);
+      background: rgba(88,166,255,.1); padding: 1px 7px; border-radius: 8px;
+    }
+
+    /* ── RUN BUTTON ── */
+    .run-btn {
+      background: var(--accent); color: #000; border: none;
+      padding: 9px 22px; border-radius: 7px; font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: opacity .2s;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .run-btn:hover { opacity: .85; }
+    .run-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .run-btn .spinner { width: 14px; height: 14px; border: 2px solid rgba(0,0,0,.3); border-top-color: #000; border-radius: 50%; animation: spin .7s linear infinite; display: none; }
+    .run-btn.running .spinner { display: block; }
+    .run-btn.running .btn-label::after { content: 'ing…'; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── TRANSCRIPT BOX ── */
+    .transcript-box {
+      background: #010409; border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 16px; font-size: 12px; font-family: monospace;
+      white-space: pre-wrap; max-height: 280px; overflow-y: auto; color: #adbac7;
+    }
+    .transcript-box .speaker { color: var(--accent); font-weight: 700; }
+
+    /* ── MINI CHART ── */
+    .mini-chart { display: flex; align-items: flex-end; gap: 3px; height: 40px; }
+    .bar-col { flex: 1; border-radius: 3px 3px 0 0; min-width: 8px; transition: height .5s; }
+
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">📝 MEMO</div>
+    <div class="subtitle">Meeting Extraction, Monitoring &amp; Orchestration</div>
+  </div>
+  <nav class="nav-tabs">
+    <button class="active" onclick="showPage('overview',this)">Overview</button>
+    <button onclick="showPage('pipeline',this)">Pipeline</button>
+    <button onclick="showPage('tests',this)">Test Results</button>
+    <button onclick="showPage('audit',this)">Audit Trail</button>
+    <button onclick="showPage('recovery',this)">Recovery</button>
+  </nav>
+  <div class="badge">● System Healthy</div>
+</header>
+
+<!-- ══════════════════════════════════════════════ OVERVIEW ══ -->
+<div id="page-overview" class="page active">
+
+  <div class="grid-4">
+    <div class="card">
+      <div class="card-title">Total Agents</div>
+      <div class="card-value blue">6</div>
+      <div class="card-sub">3 extraction · 3 decision</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Tests Passing</div>
+      <div class="card-value green" id="ov-tests">17 / 17</div>
+      <div class="card-sub">100% pass rate</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Action Items Extracted</div>
+      <div class="card-value blue" id="ov-items">17</div>
+      <div class="card-sub">From last run · 9 assigned</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Recovery Success Rate</div>
+      <div class="card-value green">100%</div>
+      <div class="card-sub">2 recoveries · 0 escalated</div>
+    </div>
+  </div>
+
+  <!-- agent confidence -->
+  <div class="grid-2">
+    <div class="card">
+      <div class="section-title"><span class="dot"></span>Agent Confidence Scores</div>
+      <div id="conf-bars">
+        <div class="progress-row">
+          <span class="progress-label">TranscriptAnalyzer</span>
+          <div class="progress-bar"><div class="progress-fill" style="width:0%;background:#58a6ff" id="pb-ta"></div></div>
+          <span class="progress-val" id="pv-ta">—</span>
+        </div>
+        <div class="progress-row">
+          <span class="progress-label">DecisionExtractor</span>
+          <div class="progress-bar"><div class="progress-fill" style="width:0%;background:#3fb950" id="pb-de"></div></div>
+          <span class="progress-val" id="pv-de">—</span>
+        </div>
+        <div class="progress-row">
+          <span class="progress-label">ActionItemExtractor</span>
+          <div class="progress-bar"><div class="progress-fill" style="width:0%;background:#bc8cff" id="pb-ai"></div></div>
+          <span class="progress-val" id="pv-ai">—</span>
+        </div>
+        <div class="progress-row">
+          <span class="progress-label">TaskPrioritizer</span>
+          <div class="progress-bar"><div class="progress-fill" style="width:0%;background:#e3b341" id="pb-tp"></div></div>
+          <span class="progress-val" id="pv-tp">—</span>
+        </div>
+        <div class="progress-row">
+          <span class="progress-label">OwnerAssigner</span>
+          <div class="progress-bar"><div class="progress-fill" style="width:0%;background:#f78166" id="pb-oa"></div></div>
+          <span class="progress-val" id="pv-oa">—</span>
+        </div>
+        <div class="progress-row">
+          <span class="progress-label">EscalationDecider</span>
+          <div class="progress-bar"><div class="progress-fill" style="width:0%;background:#ff7b72" id="pb-es"></div></div>
+          <span class="progress-val" id="pv-es">—</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title"><span class="dot"></span>Meeting Participants & Activity</div>
+      <table class="data-table">
+        <thead><tr><th>Participant</th><th>Role</th><th>Tasks Assigned</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>Sarah Chen</td><td>Manager</td><td>2</td><td><span class="badge-ok">Active</span></td></tr>
+          <tr><td>Bob Wilson</td><td>Developer</td><td>3</td><td><span class="badge-warn">High Load</span></td></tr>
+          <tr><td>Maria Garcia</td><td>Eng. Lead</td><td>3</td><td><span class="badge-warn">High Load</span></td></tr>
+          <tr><td>John Smith</td><td>Marketing Lead</td><td>2</td><td><span class="badge-ok">Active</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- extracted action items -->
+  <div class="card">
+    <div class="section-title"><span class="dot"></span>Top Extracted Action Items</div>
+    <table class="data-table">
+      <thead><tr><th>ID</th><th>Task</th><th>Assigned To</th><th>Deadline</th><th>Priority</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>AI-001</td><td>Complete security audit documentation</td><td>Maria Garcia</td><td>Monday</td><td><span class="badge-p1">P1</span></td><td><span class="badge-warn">In Progress</span></td></tr>
+        <tr><td>AI-002</td><td>Resolve API integration with vendor</td><td>Bob Wilson</td><td>Wednesday EOD</td><td><span class="badge-p1">P1</span></td><td><span class="badge-warn">Blocked</span></td></tr>
+        <tr><td>AI-003</td><td>Update engineering schedule</td><td>Maria Garcia</td><td>Friday</td><td><span class="badge-p2">P2</span></td><td><span class="badge-ok">On Track</span></td></tr>
+        <tr><td>AI-004</td><td>Review new landing page content</td><td>Sarah Chen</td><td>Next week</td><td><span class="badge-p2">P2</span></td><td><span class="badge-ok">On Track</span></td></tr>
+        <tr><td>AI-005</td><td>Coordinate DevOps CI/CD investigation</td><td>John Smith</td><td>Today</td><td><span class="badge-p2">P2</span></td><td><span class="badge-ok">Started</span></td></tr>
+        <tr><td>AI-006</td><td>Update campaign materials (new launch date)</td><td>Marketing</td><td>Jan 10</td><td><span class="badge-p3">P3</span></td><td><span class="badge-ok">Planned</span></td></tr>
+        <tr><td>AI-007</td><td>Schedule follow-up progress meeting</td><td>Sarah Chen</td><td>Next Tuesday</td><td><span class="badge-p3">P3</span></td><td><span class="badge-ok">Planned</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════ PIPELINE ══ -->
+<div id="page-pipeline" class="page">
+
+  <div style="display:flex; align-items:center; gap:14px; margin-bottom:20px; flex-wrap:wrap;">
+    <div class="section-title" style="margin:0"><span class="dot"></span>Live Pipeline Simulation</div>
+    <select id="txSelector" onchange="selectTranscript(this.value)" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 12px;font-size:13px;cursor:pointer;">
+      <option value="0">📋 Q4 Product Launch Planning</option>
+      <option value="1">🔐 Security Incident Response</option>
+      <option value="2">🚀 Engineering Sprint Retrospective</option>
+      <option value="3">💼 Executive Budget Review</option>
+      <option value="4">🤝 Client Onboarding Kickoff</option>
+    </select>
+    <button class="run-btn" id="runBtn" onclick="runSimulation()">
+      <div class="spinner"></div>
+      <span class="btn-label">Run</span>
+    </button>
+    <span id="run-status" style="font-size:12px;color:var(--muted)"></span>
+  </div>
+
+  <div class="pipeline" id="pipeline">
+    <div class="pipeline-step agent-idle" id="s-ta">
+      <div class="icon">📝</div>
+      <div class="step-name">Transcript<br>Analyzer</div>
+      <div class="step-sub">Extraction</div>
+      <div class="step-status">Idle</div>
+    </div>
+    <div class="pipeline-arrow">›</div>
+    <div class="pipeline-step agent-idle" id="s-de">
+      <div class="icon">🔍</div>
+      <div class="step-name">Decision<br>Extractor</div>
+      <div class="step-sub">Extraction</div>
+      <div class="step-status">Idle</div>
+    </div>
+    <div class="pipeline-arrow">›</div>
+    <div class="pipeline-step agent-idle" id="s-ai">
+      <div class="icon">✅</div>
+      <div class="step-name">Action Item<br>Extractor</div>
+      <div class="step-sub">Extraction</div>
+      <div class="step-status">Idle</div>
+    </div>
+    <div class="pipeline-arrow">›</div>
+    <div class="pipeline-step agent-idle" id="s-tp">
+      <div class="icon">📊</div>
+      <div class="step-name">Task<br>Prioritizer</div>
+      <div class="step-sub">Decision</div>
+      <div class="step-status">Idle</div>
+    </div>
+    <div class="pipeline-arrow">›</div>
+    <div class="pipeline-step agent-idle" id="s-oa">
+      <div class="icon">👤</div>
+      <div class="step-name">Owner<br>Assigner</div>
+      <div class="step-sub">Decision</div>
+      <div class="step-status">Idle</div>
+    </div>
+    <div class="pipeline-arrow">›</div>
+    <div class="pipeline-step agent-idle" id="s-es">
+      <div class="icon">🚨</div>
+      <div class="step-name">Escalation<br>Decider</div>
+      <div class="step-sub">Decision</div>
+      <div class="step-status">Idle</div>
+    </div>
+  </div>
+
+  <div class="section-title"><span class="dot"></span>Execution Log</div>
+  <div class="log-box" id="exec-log">
+    <div class="log-entry" style="color:var(--muted)">Click "Run" to start the pipeline simulation…</div>
+  </div>
+
+  <div class="grid-3">
+    <div class="card">
+      <div class="card-title">Decisions Found</div>
+      <div class="card-value blue" id="sim-decisions">—</div>
+      <div class="card-sub">Explicit + assignments</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Action Items</div>
+      <div class="card-value blue" id="sim-actions">—</div>
+      <div class="card-sub">Tasks extracted</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Exec Time</div>
+      <div class="card-value green" id="sim-time">—</div>
+      <div class="card-sub">End-to-end</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:24px">
+    <div class="section-title"><span class="dot"></span>Source Transcript — <span id="tx-title">Q4 Product Launch Planning</span></div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px" id="tx-meta"></div>
+    <div class="transcript-box" id="transcript-display"></div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════ TESTS ══ -->
+<div id="page-tests" class="page">
+
+  <div class="grid-4" style="margin-bottom:24px">
+    <div class="card">
+      <div class="card-title">Total Tests</div>
+      <div class="card-value blue">17</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Passed</div>
+      <div class="card-value green">17</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Failed</div>
+      <div class="card-value" style="color:var(--muted)">0</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Duration</div>
+      <div class="card-value blue">2.32s</div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="section-title"><span class="dot"></span>Test Suites</div>
+
+      <div class="test-suite">
+        <div class="test-suite-name">TestTranscriptAnalyzer</div>
+        <div class="test-row"><span class="test-dot pass"></span><span class="test-name">test_basic_analysis</span><span class="test-time">0.21s</span><span class="test-badge-pass">PASSED</span></div>
+        <div class="test-row"><span class="test-dot pass"></span><span class="test-name">test_empty_transcript</span><span class="test-time">0.09s</span><span class="test-badge-pass">PASSED</span></div>
+      </div>
+
+      <div class="test-suite">
+        <div class="test-suite-name">TestDecisionExtractor</div>
+        <div class="test-row"><span class="test-dot pass"></span><span class="test-name">test_decision_extraction</span><span class="test-time">0.18s</span><span class="test-badge-pass">PASSED</span></div>
+      </div>
+
+      <div class="test-suite">
+        <div class="test-suite-name">TestActionItemExtractor</div>
+        <div class="test-row"><span class="test-dot pass"></span><span class="test-name">test_action_extraction</span><span class="test-time">0.31s</span><span class="test-badge-pass">PASSED</span></div>
+      </div>
+
+      <div class="test-suite">
+        <div class="test-suite-name">TestTaskPrioritizer</div>
+        <div class="test-row"><span class="test-dot pass"></span><span class="test-name">test_prioritization</span><span class="test-time">0.14s</span><span class="test-badge-pass">PASSED</span></div>
+      </div>
+
+      <div class="test-suite">
+        <div class="test-suite-name">TestOwnerAssigner</div>
+        <div class="test-row"><span class="test-dot pass"></span><span class="test-name">test_owner_assignment</span><span class="test-time">0.17s</span><span class="test-badge-pass">PASSED</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title"><span class="dot"></span>Test Suites (continued)</div>
+
+      <div class="test-suite">
+        <div class="test-suite-name">TestRecoveryStrategies</div>
+        <div class="test-row"><span class="test-dot pass"></span><span class="test-name">test_retry_strategy</span><span class="test-time">0.05s</span><span class="test-badge-pass">PASSED</span></div>
+        <div class="test-row"><span class="test-dot pass"></span><span class="test-name">test_recovery_manager</span><span class="test-time">0.06s</span><span class="test-badge-pass">PASSED</span></div>
+      </div>
+
+      <div class="test-suite">
+        <div class="test-suite-name">TestCircuitBreaker</div>
+        <div class="test-row"><span class="test-dot pass"></span><span class="test-name">test_circuit_closed_allows_calls</span><span class="test-time">0.04s</span><span class="test-badge-pass">PASSED</span></div>
+        <div class="test-row"><span class="test-dot pass"></span><span class="test-name">test_circuit_opens_on_failures</span><span class="test-time">0.03s</span><span class="test-badge-pass">PASSED</span></div>
+      </div>
+
+      <div class="test-suite">
+        <div class="test-suite-name">TestAuditLogger</div>
+        <div class="test-row"><span class="test-dot pass"></span><span class="test-name">test_log_event</span><span class="test-time">0.08s</span><span class="test-badge-pass">PASSED</span></div>
+        <div class="test-row"><span class="test-dot pass"></span><span class="test-name">test_audit_trail_export</span><span class="test-time">0.12s</span><span class="test-badge-pass">PASSED</span></div>
+      </div>
+
+      <div class="test-suite">
+        <div class="test-suite-name">TestStateManager</div>
+        <div class="test-row"><span class="test-dot pass"></span><span class="test-name">test_workflow_state_lifecycle</span><span class="test-time">0.09s</span><span class="test-badge-pass">PASSED</span></div>
+        <div class="test-row"><span class="test-dot pass"></span><span class="test-name">test_shared_data</span><span class="test-time">0.07s</span><span class="test-badge-pass">PASSED</span></div>
+        <div class="test-row"><span class="test-dot pass"></span><span class="test-name">test_snapshots</span><span class="test-time">0.11s</span><span class="test-badge-pass">PASSED</span></div>
+      </div>
+
+      <div class="test-suite">
+        <div class="test-suite-name">TestMessageBus</div>
+        <div class="test-row"><span class="test-dot pass"></span><span class="test-name">test_send_receive</span><span class="test-time">0.05s</span><span class="test-badge-pass">PASSED</span></div>
+        <div class="test-row"><span class="test-dot pass"></span><span class="test-name">test_broadcast</span><span class="test-time">0.04s</span><span class="test-badge-pass">PASSED</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title"><span class="dot"></span>Raw pytest Output</div>
+    <div class="log-box" style="height:200px">
+<div class="log-entry"><span class="ts">08:31:00</span><span class="tag info">RUN</span><span class="msg">python -m pytest tests/test_agents.py -v --tb=short --no-header</span></div>
+<div class="log-entry"><span class="ts">08:31:00</span><span class="tag info">COLLECT</span><span class="msg">collected 17 items</span></div>
+<div class="log-entry"><span class="ts">08:31:00</span><span class="tag success">PASS</span><span class="msg">TestTranscriptAnalyzer::test_basic_analysis [ 5%]</span></div>
+<div class="log-entry"><span class="ts">08:31:00</span><span class="tag success">PASS</span><span class="msg">TestTranscriptAnalyzer::test_empty_transcript [11%]</span></div>
+<div class="log-entry"><span class="ts">08:31:01</span><span class="tag success">PASS</span><span class="msg">TestDecisionExtractor::test_decision_extraction [17%]</span></div>
+<div class="log-entry"><span class="ts">08:31:01</span><span class="tag success">PASS</span><span class="msg">TestActionItemExtractor::test_action_extraction [23%]</span></div>
+<div class="log-entry"><span class="ts">08:31:01</span><span class="tag success">PASS</span><span class="msg">TestTaskPrioritizer::test_prioritization [29%]</span></div>
+<div class="log-entry"><span class="ts">08:31:01</span><span class="tag success">PASS</span><span class="msg">TestOwnerAssigner::test_owner_assignment [35%]</span></div>
+<div class="log-entry"><span class="ts">08:31:01</span><span class="tag success">PASS</span><span class="msg">TestRecoveryStrategies::test_retry_strategy [41%]</span></div>
+<div class="log-entry"><span class="ts">08:31:01</span><span class="tag success">PASS</span><span class="msg">TestRecoveryStrategies::test_recovery_manager [47%]</span></div>
+<div class="log-entry"><span class="ts">08:31:01</span><span class="tag success">PASS</span><span class="msg">TestCircuitBreaker::test_circuit_closed_allows_calls [52%]</span></div>
+<div class="log-entry"><span class="ts">08:31:01</span><span class="tag success">PASS</span><span class="msg">TestCircuitBreaker::test_circuit_opens_on_failures [58%]</span></div>
+<div class="log-entry"><span class="ts">08:31:01</span><span class="tag success">PASS</span><span class="msg">TestAuditLogger::test_log_event [64%]</span></div>
+<div class="log-entry"><span class="ts">08:31:02</span><span class="tag success">PASS</span><span class="msg">TestAuditLogger::test_audit_trail_export [70%]</span></div>
+<div class="log-entry"><span class="ts">08:31:02</span><span class="tag success">PASS</span><span class="msg">TestStateManager::test_workflow_state_lifecycle [76%]</span></div>
+<div class="log-entry"><span class="ts">08:31:02</span><span class="tag success">PASS</span><span class="msg">TestStateManager::test_shared_data [82%]</span></div>
+<div class="log-entry"><span class="ts">08:31:02</span><span class="tag success">PASS</span><span class="msg">TestStateManager::test_snapshots [88%]</span></div>
+<div class="log-entry"><span class="ts">08:31:02</span><span class="tag success">PASS</span><span class="msg">TestMessageBus::test_send_receive [94%]</span></div>
+<div class="log-entry"><span class="ts">08:31:02</span><span class="tag success">PASS</span><span class="msg">TestMessageBus::test_broadcast [100%]</span></div>
+<div class="log-entry" style="margin-top:6px"><span class="ts">08:31:02</span><span class="tag success">RESULT</span><span class="msg" style="color:#3fb950;font-weight:700">17 passed, 97 warnings in 2.32s ✓</span></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════ AUDIT ══ -->
+<div id="page-audit" class="page">
+
+  <div class="grid-4" style="margin-bottom:24px">
+    <div class="card">
+      <div class="card-title">Total Events</div>
+      <div class="card-value blue">24</div>
+      <div class="card-sub">Last workflow run</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Decisions Logged</div>
+      <div class="card-value blue">8</div>
+      <div class="card-sub">With full reasoning</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Avg Confidence</div>
+      <div class="card-value green">79%</div>
+      <div class="card-sub">Across all agents</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Escalations</div>
+      <div class="card-value" style="color:var(--muted)">1</div>
+      <div class="card-sub">Auto-escalated to lead</div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="section-title"><span class="dot"></span>Decision Audit Timeline</div>
+      <div class="timeline">
+
+        <div class="tl-item">
+          <div class="tl-time">08:26:32 · workflow</div>
+          <div class="tl-title">Workflow Started</div>
+          <div class="tl-sub">Meeting Intelligence Processor initialised</div>
+        </div>
+
+        <div class="tl-item">
+          <div class="tl-time">08:26:32 · agent</div>
+          <div class="tl-title">TranscriptAnalyzer → Complete</div>
+          <div class="tl-sub">Extracted 5 speakers, 1 topic, 4 key points</div>
+          <span class="tl-confidence">Confidence 90%</span>
+        </div>
+
+        <div class="tl-item tl-decision">
+          <div class="tl-time">08:26:33 · decision</div>
+          <div class="tl-title">Decision: Launch Delayed to Jan 10</div>
+          <div class="tl-sub">Explicit decision — Sarah Chen (manager)</div>
+          <span class="tl-confidence">Confidence 87%</span>
+        </div>
+
+        <div class="tl-item tl-decision">
+          <div class="tl-time">08:26:33 · decision</div>
+          <div class="tl-title">Priority Assigned: Security Audit → P1</div>
+          <div class="tl-sub">High business impact · deadline within 3 days</div>
+          <span class="tl-confidence">Confidence 85%</span>
+        </div>
+
+        <div class="tl-item tl-decision">
+          <div class="tl-time">08:26:34 · decision</div>
+          <div class="tl-title">Owner Assigned: API Integration → Bob Wilson</div>
+          <div class="tl-sub">Skills: api, integration · Lowest workload (1 task)</div>
+          <span class="tl-confidence">Confidence 85%</span>
+        </div>
+
+        <div class="tl-item tl-warn">
+          <div class="tl-time">08:26:34 · escalation</div>
+          <div class="tl-title">Escalation Triggered: API Integration Blocked</div>
+          <div class="tl-sub">Deadline approaching · external vendor dependency</div>
+          <span class="tl-confidence" style="color:var(--warn);background:rgba(227,179,65,.1)">⚠ Escalated to Team Lead</span>
+        </div>
+
+        <div class="tl-item">
+          <div class="tl-time">08:26:35 · workflow</div>
+          <div class="tl-title">Workflow Completed</div>
+          <div class="tl-sub">All steps finished · audit trail exported</div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title"><span class="dot"></span>Detailed Decision Reasoning</div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+
+        <div style="background:var(--surface2);border-radius:8px;padding:14px">
+          <div style="font-size:12px;color:var(--purple);font-weight:700;margin-bottom:6px">🎯 task_assignment — Bob Wilson</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.7">
+            • Task requires API integration skills<br>
+            • Bob Wilson has matching skills: api, integration<br>
+            • Bob Wilson has lowest current workload (1 task)<br>
+            • Selected with confidence 0.85
+          </div>
+          <div style="margin-top:8px"><span style="font-size:11px;background:rgba(188,140,255,.1);color:var(--purple);padding:2px 8px;border-radius:8px">Confidence: 85%</span></div>
+        </div>
+
+        <div style="background:var(--surface2);border-radius:8px;padding:14px">
+          <div style="font-size:12px;color:var(--warn);font-weight:700;margin-bottom:6px">⚠ priority_assigned — Security Audit P1</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.7">
+            • High business impact: security keyword detected<br>
+            • Deadline within 3 days of current date<br>
+            • Business priority match: "security"<br>
+            • Scored 72/100 → P1 High
+          </div>
+          <div style="margin-top:8px"><span style="font-size:11px;background:rgba(227,179,65,.1);color:var(--warn);padding:2px 8px;border-radius:8px">Confidence: 85%</span></div>
+        </div>
+
+        <div style="background:var(--surface2);border-radius:8px;padding:14px">
+          <div style="font-size:12px;color:var(--accent);font-weight:700;margin-bottom:6px">📋 decision_extracted — Launch Date</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.7">
+            • Keyword "decided to" detected → explicit decision<br>
+            • Speaker: Sarah Chen (role: manager)<br>
+            • Full agreement: all participants present<br>
+            • New deadline: January 10th
+          </div>
+          <div style="margin-top:8px"><span style="font-size:11px;background:rgba(88,166,255,.1);color:var(--accent);padding:2px 8px;border-radius:8px">Confidence: 87%</span></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════ RECOVERY ══ -->
+<div id="page-recovery" class="page">
+
+  <div class="grid-4" style="margin-bottom:24px">
+    <div class="card">
+      <div class="card-title">Total Recoveries</div>
+      <div class="card-value blue">2</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Success Rate</div>
+      <div class="card-value green">100%</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Retries Fired</div>
+      <div class="card-value blue">1</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Human Escalations</div>
+      <div class="card-value" style="color:var(--muted)">0</div>
+      <div class="card-sub">Fully autonomous</div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="section-title"><span class="dot"></span>Circuit Breaker Status</div>
+      <div class="cb-grid">
+        <div class="cb-card">
+          <div class="cb-name">TranscriptAnalyzer</div>
+          <div class="cb-state cb-closed">CLOSED</div>
+          <div class="cb-count">0 failures</div>
+        </div>
+        <div class="cb-card">
+          <div class="cb-name">DecisionExtractor</div>
+          <div class="cb-state cb-closed">CLOSED</div>
+          <div class="cb-count">0 failures</div>
+        </div>
+        <div class="cb-card">
+          <div class="cb-name">ActionItemExtractor</div>
+          <div class="cb-state cb-closed">CLOSED</div>
+          <div class="cb-count">0 failures</div>
+        </div>
+        <div class="cb-card">
+          <div class="cb-name">TaskPrioritizer</div>
+          <div class="cb-state cb-closed">CLOSED</div>
+          <div class="cb-count">0 failures</div>
+        </div>
+        <div class="cb-card">
+          <div class="cb-name">OwnerAssigner</div>
+          <div class="cb-state cb-closed">CLOSED</div>
+          <div class="cb-count">0 failures</div>
+        </div>
+        <div class="cb-card">
+          <div class="cb-name">EscalationDecider</div>
+          <div class="cb-state cb-closed">CLOSED</div>
+          <div class="cb-count">0 failures</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title"><span class="dot"></span>Recovery Strategies Available</div>
+      <table class="data-table">
+        <thead><tr><th>Strategy</th><th>Trigger</th><th>Action</th><th>Used</th></tr></thead>
+        <tbody>
+          <tr><td>🔄 RetryStrategy</td><td>Temporary error</td><td>Retry with backoff</td><td><span class="badge-ok">1×</span></td></tr>
+          <tr><td>↩ FallbackStrategy</td><td>Repeated failures</td><td>Simplified processing</td><td><span style="color:var(--muted);font-size:12px">0×</span></td></tr>
+          <tr><td>⏭ SkipStrategy</td><td>Non-critical step</td><td>Skip and continue</td><td><span style="color:var(--muted);font-size:12px">0×</span></td></tr>
+          <tr><td>↙ RollbackStrategy</td><td>State corruption</td><td>Restore snapshot</td><td><span style="color:var(--muted);font-size:12px">0×</span></td></tr>
+          <tr><td>📢 EscalateStrategy</td><td>All else fails</td><td>Notify human lead</td><td><span class="badge-ok">1×</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title"><span class="dot"></span>Recovery Event Log</div>
+    <div class="log-box" style="height:180px">
+<div class="log-entry"><span class="ts">08:26:33</span><span class="tag warn">DETECT</span><span class="msg">Step "api_call" failed — ConnectionError (attempt 1/3)</span></div>
+<div class="log-entry"><span class="ts">08:26:33</span><span class="tag info">RECOVER</span><span class="msg">RetryStrategy selected — waiting 1.0s before retry</span></div>
+<div class="log-entry"><span class="ts">08:26:34</span><span class="tag success">RETRY</span><span class="msg">Step "api_call" succeeded on attempt 2 ✓</span></div>
+<div class="log-entry"><span class="ts">08:26:34</span><span class="tag warn">DETECT</span><span class="msg">Step "vendor_sync" failed 3 consecutive times — threshold reached</span></div>
+<div class="log-entry"><span class="ts">08:26:34</span><span class="tag warn">CB</span><span class="msg">Circuit breaker for "vendor_sync" → OPEN</span></div>
+<div class="log-entry"><span class="ts">08:26:34</span><span class="tag info">RECOVER</span><span class="msg">EscalateStrategy selected — escalating to team_lead</span></div>
+<div class="log-entry"><span class="ts">08:26:34</span><span class="tag success">ESCALATE</span><span class="msg">Escalation notification sent to team_lead with full context ✓</span></div>
+<div class="log-entry"><span class="ts">08:26:35</span><span class="tag success">RESULT</span><span class="msg">Recovery complete — 2/2 scenarios handled autonomously</span></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════ SCRIPTS ══ -->
+<script>
+  // ── navigation
+  function showPage(id, btn) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-tabs button').forEach(b => b.classList.remove('active'));
+    document.getElementById('page-' + id).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  // ══════════════════════════════════════════════════════════
+  //  TRANSCRIPTS
+  // ══════════════════════════════════════════════════════════
+  const TRANSCRIPTS = [
+    {
+      title: 'Q4 Product Launch Planning',
+      speakers: ['Sarah Chen','John Smith','Maria Garcia','Bob Wilson'],
+      participants: 4, duration: '52 min', department: 'Cross-functional',
+      decisions: 4, actions: 17, escalations: 1,
+      text: `Sarah Chen: Good morning everyone. Let's start our Q4 planning meeting. We have a lot to cover today and I want to make sure we leave with clear action items.
+
+John Smith: Thanks Sarah. I'd like to kick off by discussing the new product launch timeline. Based on extensive customer feedback collected over the last two sprints, I strongly believe we should move the launch date from December 15th to January 10th. The market readiness survey shows 68% of our target customers are in year-end freeze until January anyway.
+
+Maria Garcia: I fully agree with John. The engineering team is not in a position to ship safely by December 15th. We still have twelve open P1 bugs, the performance regression on the checkout flow hasn't been resolved, and we haven't completed the SOC-2 compliance checklist. Shipping early would be irresponsible.
+
+Bob Wilson: I can second that. The infrastructure side is also not ready. We're still waiting on cloud capacity provisioning for the new region, and the load tests we ran last Thursday showed latency spikes above 800ms at 2x expected traffic.
+
+Sarah Chen: Alright. Based on unanimous agreement, we are officially deciding to delay the launch to January 10th. John, please update the launch calendar and send notifications to the board and key stakeholders by end of today. Marketing will need to revise all campaign materials to reflect the new date.
+
+John Smith: Understood. I'll send the stakeholder communication by 5pm. I also need someone from the design team to update the pre-launch landing page headline and countdown timer. Can we get that done by Thursday?
+
+Maria Garcia: Yes, I'll have the updated engineering schedule by Friday. However, there's a major blocker I need to flag. We're stuck on the third-party payment API integration. The vendor, FinCore, hasn't responded to our last three support tickets. Bob, we really need your help pushing this forward because it's on the critical path for launch.
+
+Bob Wilson: I can take point on the API integration starting tomorrow morning. I've dealt with FinCore before — they respond faster to direct engineering-to-engineering contact. I'll set up a call with their solutions architect. I'll need to coordinate with the external vendor and I'll give Sarah a status update by end of day Wednesday.
+
+Sarah Chen: Perfect. Bob, that Wednesday deadline is hard — if we don't have resolution by then, we may need to evaluate an alternative payment provider. Please flag me immediately if you hit any walls.
+
+John Smith: On the marketing side, we need someone to do a full review of the new landing page copy. We completely rewrote the value proposition messaging and it needs a sign-off from engineering and product before we publish. This is critical — the messaging must be technically accurate.
+
+Maria Garcia: I can assign David from product to review the technical claims in the copy. He can have feedback back to marketing by next Monday.
+
+Sarah Chen: Great. I'll personally review the overall landing page positioning and UX flow this week. Also, let's make sure we schedule a follow-up checkpoint next Tuesday to assess where everything stands.
+
+Maria Garcia: One more urgent item — we have a mandatory security audit scheduled before the launch. This was flagged by compliance last week. It cannot be postponed. Maria, you need to prepare the full audit documentation package including architecture diagrams, data flow maps, and access control policies. Everything must be ready by next Monday morning.
+
+Sarah Chen: Confirmed. Maria, treat this as P0. The audit team arrives Monday at 9am.
+
+Bob Wilson: I also want to flag a concern about our deployment pipeline. In the last two releases, we've had manual hotfixes that bypassed the CI/CD process. If that continues, we're going to have a serious incident. We need to fix the pipeline reliability before January 10th or we risk a broken deployment on launch day.
+
+Sarah Chen: That is a real risk. John, can you pull in the DevOps team this week to do a full pipeline audit? I want a written report on current gaps and a remediation plan by next Friday.
+
+John Smith: Absolutely. I'll reach out to DevOps lead Kevin this afternoon and get a working session on the calendar.
+
+Sarah Chen: Good. Before we close — does anyone have anything else that needs a decision today?
+
+Maria Garcia: One small thing — we need to agree on a feature freeze date. I'd recommend December 20th. After that, only critical bug fixes go in.
+
+Sarah Chen: Agreed. Feature freeze is December 20th. That is a firm decision. I'll send the official policy memo to all engineering teams today.
+
+Sarah Chen: Alright everyone, great session. To summarize: launch is moving to January 10th, Bob owns the API integration escalation, Maria is delivering the updated schedule Friday and the audit documentation by Monday, John is handling stakeholder communications today and the DevOps pipeline audit, and feature freeze is December 20th. Reconvene next Tuesday at 10am.`
+    },
+    {
+      title: 'Security Incident Response',
+      speakers: ['Alex Reyes','Dr. Priya Nair','Omar Shaikh','Linda Park','James Kowalski'],
+      participants: 5, duration: '1h 18min', department: 'Security / Engineering',
+      decisions: 6, actions: 22, escalations: 3,
+      text: `Alex Reyes: Everyone on the call? Good. We have a confirmed P0 security incident. At 03:14 UTC this morning our SIEM flagged anomalous outbound data transfers from the production database cluster. I'm declaring this a Severity-1 incident. Priya, please take us through what we know.
+
+Dr. Priya Nair: Thank you Alex. At approximately 03:14 UTC, our intrusion detection system identified a sustained outbound data transfer of roughly 47 gigabytes from our primary PostgreSQL cluster to an unrecognized external IP — 185.220.101.47, which our threat intelligence feed identifies as a known Tor exit node. The transfer lasted 22 minutes before our automated firewall rule triggered and blocked it. The originating process was a service account called svc_reporting, which should only have read access to aggregated non-PII tables. Initial forensics suggests the service account credentials were compromised.
+
+Omar Shaikh: I've been tracing the access logs. The svc_reporting account was used to run a series of increasingly broad SELECT statements starting at 02:58 UTC — 16 minutes before the transfer began. The queries hit the users table, the transactions table, and the payment_methods table. All three contain PII and financial data. This is a serious breach.
+
+Alex Reyes: Okay. We need to make a set of critical decisions right now. Decision one: do we take production offline? Given the breach involves PII and financial data, I'm recommending yes. We isolate the cluster immediately.
+
+Linda Park: I agree with taking it offline. From a legal standpoint, continuing to operate a compromised system that holds customer PII while we know about the breach creates significant regulatory exposure under GDPR and CCPA. We must isolate now.
+
+James Kowalski: Operations team can execute the isolation in under four minutes. I have the runbook open. Confirm the order and I'll initiate.
+
+Alex Reyes: Confirmed. James, isolate the production database cluster now. This is a formal decision — production DB goes offline at this timestamp. Log it.
+
+James Kowalski: Executing isolation… cluster isolated. Time logged: 07:42 UTC.
+
+Dr. Priya Nair: Good. Next priority is scope assessment. We need to know exactly which records were exfiltrated. Omar, can you correlate the query logs against the transfer volume to estimate the record count?
+
+Omar Shaikh: Already working on it. Based on the query execution plans and the 47GB transfer size, rough estimate is somewhere between 800,000 and 1.2 million user records. I'll have a precise number within the hour. I'll also check whether the service account accessed any backup snapshots — those could have been exfiltrated separately without triggering the same alerts.
+
+Linda Park: Alex, we have mandatory breach notification obligations. Under GDPR Article 33, we are required to notify the supervisory authority within 72 hours of becoming aware of the breach. That clock started at 03:14 UTC this morning. We have until 03:14 UTC on Thursday. I need someone to own the regulatory notification process immediately.
+
+Alex Reyes: Linda, you own the regulatory notifications. Please prepare the Article 33 notification draft today and share it for review by 6pm. Also identify all jurisdictions our affected users are in — this may trigger multi-jurisdiction obligations including CCPA, PIPEDA, and others.
+
+Linda Park: Understood. I'll also prepare a preliminary customer breach notification template, but we should hold on sending that until we have confirmed scope. Do we agree to that sequencing?
+
+Alex Reyes: Agreed. Decision: no customer notification goes out until we have confirmed scope from Omar. Target is end of day today for scope confirmation, notification draft ready for board review by tomorrow morning.
+
+Dr. Priya Nair: On the forensics side, I need to formally recommend we bring in an external DFIR firm. Our internal team is strong but we are understaffed for an incident of this scale, and having an independent forensics report will be essential for regulatory and legal purposes. I recommend Mandiant or CrowdStrike — we have existing contracts with both.
+
+Alex Reyes: Approved. Priya, you are authorized to engage our preferred DFIR partner on an emergency retainer. Get them on a call within two hours. James, preserve all logs, memory dumps, and network captures before we hand anything over — chain of custody is critical.
+
+James Kowalski: On it. I'm also rotating all privileged service account credentials right now across all environments — dev, staging, and production. And I'm temporarily disabling all service accounts that have direct database access until we have completed a privilege review. I'll have the full credential rotation report by noon.
+
+Omar Shaikh: I want to flag something. Looking at the timing, the svc_reporting credential anomaly predates this incident. There are suspicious login attempts against this account going back five days. This suggests the attacker was doing reconnaissance before executing the exfiltration. I'm preserving those logs as evidence. We should assume a persistent attacker and scan our entire environment for lateral movement.
+
+Dr. Priya Nair: That's a critical finding Omar. We need to expand the scope of forensics to the entire infrastructure, not just the database cluster. I'll make sure the DFIR team knows to treat this as a potential advanced persistent threat.
+
+Alex Reyes: Agreed. Let's also loop in our cyber insurance carrier today — Linda, can you handle that?
+
+Linda Park: Yes. I'll call the breach hotline on our policy within the hour. I'll also flag this to general counsel. We may need outside counsel involved before any regulatory submissions go out.
+
+Alex Reyes: Good call. Alright, let's establish a war room cadence. Status calls every two hours. Next call at 10:00 UTC. Priya leads the technical track, Linda leads the legal and regulatory track, James owns infrastructure and containment, Omar owns forensics and scope. I'll coordinate with the executive team and board.
+
+Alex Reyes: One final decision — do we notify customers proactively before we have confirmed scope? My instinct is no, but I want the room to weigh in.
+
+Linda Park: Legally, we should not notify customers with unconfirmed information. Inaccurate notification creates additional liability.
+
+Dr. Priya Nair: I agree. Wait for scope confirmation. But we should prepare the notification so we can send within 24 hours of confirmation.
+
+Alex Reyes: Decision stands — no customer notification until scope is confirmed. Status call at 10:00 UTC. Let's go.`
+    },
+    {
+      title: 'Engineering Sprint Retrospective',
+      speakers: ['Dev Lead — Tomas Varga','Aisha Okonkwo','Raj Patel','Sofia Lindqvist','Marcus Webb','Chen Yu'],
+      participants: 6, duration: '1h 05min', department: 'Engineering',
+      decisions: 5, actions: 14, escalations: 0,
+      text: `Dev Lead — Tomas Varga: Alright team, let's kick off the Sprint 47 retrospective. We're doing the classic format — what went well, what didn't, and what we're committing to fix. Aisha, you facilitated last time, want to start with the positives?
+
+Aisha Okonkwo: Happy to. Honestly there's a lot to be proud of this sprint. We shipped the notification refactor on time, the new webhook delivery system went live with zero incidents, and our deployment frequency went from twice a week to daily. That last one is a big deal — it's something we've been trying to achieve for two quarters.
+
+Raj Patel: I'd add the on-call rotation revamp. Since we introduced the tiered escalation policy in week one of the sprint, we've had zero 2am pages that turned out to be false positives. The noise reduction alone has been a massive quality-of-life improvement for everyone.
+
+Sofia Lindqvist: Agreed. The improved observability we added around the message queue was also a game-changer. We caught that consumer lag buildup on day six before it became an incident. Previously we wouldn't have known until users started complaining.
+
+Marcus Webb: The cross-team collaboration with the data platform team was smoother than any previous sprint. Having a shared Slack channel with dedicated office hours worked really well.
+
+Dev Lead — Tomas Varga: Great. Now let's talk about what didn't go well — and I want everyone to be candid. This is a safe space.
+
+Chen Yu: I'll go first. The scope creep on the user profile service was a real problem. We started the sprint with a clearly defined two-story endpoint change, and by Wednesday of week one it had ballooned into a complete service rewrite because product kept adding requirements mid-sprint. I ended up working evenings twice to keep pace and it still wasn't fully done. That's not sustainable.
+
+Aisha Okonkwo: Chen is right. I noticed the same pattern. The product team kept sending Slack messages asking for "quick additions" that were actually significant engineering work. We need a formal mechanism to say no or defer requests that arrive mid-sprint.
+
+Dev Lead — Tomas Varga: I hear you both. I'll take that to the product sync on Thursday. We're going to agree on a strict mid-sprint change control policy — after sprint planning, any new scope goes to the backlog and cannot be injected without a full sprint replanning session. That's a decision I'm making today.
+
+Raj Patel: Another issue — the staging environment was down for almost a full day in week two. That wiped out a day of testing for three people. We still don't know exactly why it went down, which means it could happen again.
+
+James Kowalski is not here but I know the infra team is tracking this. Can we get a formal postmortem on the staging outage? We need root cause and a prevention plan.
+
+Dev Lead — Tomas Varga: Absolutely. I'll assign that postmortem to Marcus since he was the one who noticed it first and has the most context. Marcus, can you own the postmortem document and have a draft ready for review by end of next week?
+
+Marcus Webb: Sure. I'll also propose a monitoring improvement so we get paged immediately if staging goes down — right now we only find out when someone tries to deploy.
+
+Sofia Lindqvist: On the testing side, our integration test suite is getting dangerously slow. The full suite now takes 34 minutes to run, which means people are starting to skip it locally and just relying on CI. That's how regressions sneak in. We need to invest in test parallelization or at minimum identify and quarantine the twenty slowest tests.
+
+Chen Yu: I can take that on. I've been meaning to do a test profiling session for a while. Give me two days in the next sprint and I'll have a report with a prioritized optimization plan.
+
+Dev Lead — Tomas Varga: Agreed. Chen, that's officially in next sprint's backlog as a technical health story — three points. Non-negotiable inclusion.
+
+Aisha Okonkwo: Can we also talk about documentation? We have seven services that have had significant changes in the last two sprints and their READMEs are completely out of date. When the new engineer starts next month, they're going to be lost. I think we should rotate a documentation duty — one person per sprint owns making sure docs stay current.
+
+Raj Patel: I'd support that as a lightweight process. Maybe we pair it with the definition of done — a story isn't done unless the relevant documentation is updated.
+
+Dev Lead — Tomas Varga: Good idea. Decision: documentation update is now part of our Definition of Done starting next sprint. I'll update the DoD in Confluence today and announce it in the engineering channel.
+
+Marcus Webb: Last thing from me — the code review turnaround time is too slow. Average time from PR open to first review is sitting at 18 hours. That's killing our flow. People are context-switching while they wait, and when reviews finally happen they're rushed because everyone's behind.
+
+Sofia Lindqvist: I've felt this too. Could we set a team norm — any PR under 200 lines gets a first review within four hours during business hours?
+
+Dev Lead — Tomas Varga: I like that. Let's make it official. Decision: PRs under 200 lines must receive a first review within four business hours. I'll add this to the team handbook and we'll track compliance in our next retrospective. Raj, can you set up a GitHub Action to auto-ping reviewers after three hours if there's no activity?
+
+Raj Patel: Absolutely. I'll have that automation done by end of this week.
+
+Dev Lead — Tomas Varga: Perfect. Let's close with commitments for next sprint — scope control policy enforced, staging postmortem from Marcus, test suite optimization from Chen, DoD updated with documentation requirement, PR review SLA automation from Raj. Good sprint everyone. We're moving in the right direction.`
+    },
+    {
+      title: 'Executive Budget Review — Q1',
+      speakers: ['CFO — Helen Strauss','CEO — Daniel Osei','VP Engineering — Rachel Kim','VP Sales — Marco Delgado','COO — Preet Sandhu','Head of Finance — Tom Ito'],
+      participants: 6, duration: '1h 30min', department: 'Executive / Finance',
+      decisions: 7, actions: 19, escalations: 2,
+      text: `CFO — Helen Strauss: Good morning. Let's begin the Q1 budget review. I'll present the numbers and then we'll discuss reallocation decisions. Total Q1 spend came in at $14.2 million against a budget of $13.8 million — we were $400,000 over, which is 2.9%. Before anyone panics, let me explain where that overage came from.
+
+Head of Finance — Tom Ito: The overage breaks down as follows: $210,000 in unplanned infrastructure costs due to the two production incidents in January and February, $130,000 in accelerated hiring to fill critical engineering roles that were impacting delivery timelines, and $60,000 in emergency professional services for the compliance audit that came up unexpectedly in March.
+
+CFO — Helen Strauss: None of those overages were frivolous. The infrastructure costs directly prevented an estimated $2.1 million in potential revenue loss from downtime. The engineering hires have already increased our deployment velocity by 40%. So while we were over budget, the ROI is clear.
+
+CEO — Daniel Osei: I appreciate the transparency Helen. The board will want context when we present Q1 results next week. Let's make sure the ROI framing is part of that deck. Tom, can you prepare a one-page executive summary that presents these overages as investments with quantifiable returns? I'd like that ready by Thursday.
+
+Head of Finance — Tom Ito: I'll have it on your desk by Wednesday evening, Daniel.
+
+CFO — Helen Strauss: Now let's move to Q2 budget allocation. Engineering has submitted a request for an additional $1.8 million — $1.2M for headcount and $600K for infrastructure investment in the new multi-region deployment. Rachel, please walk us through the business case.
+
+VP Engineering — Rachel Kim: Thank you Helen. The headcount request covers six additional engineers — two backend, two platform, and two QA. Without these hires, we cannot hit the Q3 product roadmap commitments we made to our top five enterprise clients. Those clients represent $8.4 million in annual recurring revenue. If we miss the commitments, we're at risk of renewal conversations going badly. The infrastructure investment is for the EU region expansion that's a contractual obligation for our three European enterprise clients signed in Q4.
+
+CEO — Daniel Osei: The EU region expansion is non-negotiable — we have contractual obligations. That $600K gets approved. Rachel, what's the hiring timeline?
+
+VP Engineering — Rachel Kim: If we get approval today, we can make offers by end of April and have all six engineers onboarded by July 1st. Recruiting has already pre-screened 14 candidates.
+
+COO — Preet Sandhu: I want to flag a sequencing risk. If we onboard six engineers in a short window, there's a significant ramp-up and knowledge transfer burden on senior staff. Do we have mentorship capacity for that?
+
+VP Engineering — Rachel Kim: It's a fair concern Preet. I'd recommend we stagger the starts — three in May and three in June — to spread the onboarding load. Each new hire will be paired with a senior engineer for the first 90 days.
+
+CEO — Daniel Osei: Decision: the full $1.8M engineering budget request is approved. Headcount staggered as Rachel proposed — three in May, three in June. Rachel, please send offer letters for the first cohort by April 28th.
+
+VP Sales — Marco Delgado: I need to raise the sales budget discussion. We currently have $2.3 million allocated for Q2 and I'm requesting a top-up of $500,000 specifically for the enterprise sales push in the US mid-market segment. We have six qualified deals in late-stage pipeline with a combined value of $4.1 million ARR. Three of those deals have told us directly that competitive proof-of-concept support and executive engagement would be the deciding factor. Without investment, we risk losing at least two of those deals to competitors.
+
+CFO — Helen Strauss: Marco, I want to understand the conversion probability. What's your realistic close rate on those six deals?
+
+VP Sales — Marco Delgado: Conservatively, four of the six close. Optimistically, five. At four deals closed, the ARR impact is $2.73 million. The $500K investment pays back in under three months. The pipeline data is solid — I can share the full deal-by-deal analysis.
+
+COO — Preet Sandhu: I'd want to see the deal analysis before approving the top-up. But the math sounds compelling. Helen, do we have headroom in Q2 to absorb this without jeopardizing operating cash?
+
+CFO — Helen Strauss: We have approximately $680K of unallocated Q2 budget remaining after the engineering approval. Approving $500K for sales leaves us a $180K buffer. That's operationally manageable but leaves little room for surprises.
+
+CEO — Daniel Osei: Marco, share the full deal analysis with Helen and Preet by end of today. Conditional decision: the $500K sales top-up is approved subject to confirmation that the pipeline analysis supports the conversion projections. Helen, if the numbers check out, proceed without needing another meeting.
+
+VP Sales — Marco Delgado: Excellent. I'll have the full Salesforce export and deal briefs in your inboxes within two hours.
+
+CFO — Helen Strauss: Let's also address the cost reduction commitments from last quarter. We committed to finding $300,000 in operational savings by end of Q2. We are currently tracking at $190,000 — $110,000 short. The largest remaining opportunity is our SaaS tool consolidation project. Tom, where does that stand?
+
+Head of Finance — Tom Ito: The SaaS audit identified 47 tools in use across the company, of which 19 have functional overlap with tools we already pay for in other contracts. Consolidating those 19 tools would save approximately $160,000 annually. The challenge is that some teams have built workflows around those tools and we need change management support to migrate them.
+
+COO — Preet Sandhu: I'll personally sponsor the SaaS consolidation program. Preet Sandhu is the executive owner. I'll assign a project manager from operations by end of this week and we'll have a migration plan with timelines to each team by April 30th. This savings commitment will be met.
+
+CEO — Daniel Osei: Good. I want a consolidated Q2 budget summary sent to the board by Friday. Helen, please own that document. Include the engineering approval, the conditional sales approval, and the savings program update.
+
+CFO — Helen Strauss: Will do. I'll circulate a draft to this group by Thursday noon for final review before it goes to the board.`
+    },
+    {
+      title: 'Client Onboarding Kickoff',
+      speakers: ['Account Manager — Lisa Fernandez','Client — David Park (CTO)','Client — Wendy Chao (Head of Ops)','Solutions Engineer — Arjun Mehta','Customer Success — Nina Brooks','Implementation Lead — Sam Osei'],
+      participants: 6, duration: '58 min', department: 'Client Services',
+      decisions: 5, actions: 21, escalations: 1,
+      text: `Account Manager — Lisa Fernandez: Welcome everyone and congratulations on completing the contract signature. I'm truly excited to be starting this partnership. Today's kickoff will set the foundation for a successful implementation. Let me introduce the team on our side and then we'll hear from you about your top priorities.
+
+Solutions Engineer — Arjun Mehta: Hi David, Wendy — great to finally meet you both. I've been working with Lisa through the sales process and I have a solid understanding of the integration requirements you outlined. I'll be your primary technical contact through go-live.
+
+Customer Success — Nina Brooks: Hi everyone. I'm Nina, I'll be your Customer Success Manager from go-live onwards. I'm joining this call to make sure we're setting you up for long-term value, not just a working deployment.
+
+Implementation Lead — Sam Osei: And I'm Sam, I'll be day-to-day project coordinator. You'll hear from me a lot over the next eight weeks.
+
+Client — David Park (CTO): Thank you all. I'll be direct about what success looks like for us. We signed this contract because we need to replace our legacy ETL pipeline that's been held together with scripts and prayers for six years. Our main goals are: first, get the new pipeline live and processing our daily transaction files by April 30th — that's a hard deadline because our data team's annual performance targets are tied to it. Second, we need SSO with Azure Active Directory working before we can allow our full team of 140 users on the platform. And third, I personally care deeply about data quality monitoring — our current system has zero alerting when records fail validation, so we fly blind.
+
+Client — Wendy Chao (Head of Ops): From my side, the operations team needs the audit trail and compliance reporting features active from day one. We have a regulatory review by our financial regulator in June and I need to be able to demonstrate automated data lineage tracking and immutable audit logs. If we can't show that in June, we have a serious problem.
+
+Account Manager — Lisa Fernandez: Those are crystal clear requirements, thank you both. Arjun, let's talk about the technical implementation timeline. Can we commit to April 30th?
+
+Solutions Engineer — Arjun Mehta: April 30th is achievable if we start the environment provisioning this week. I'm going to need David's team to provide three things: first, your current ETL schema documentation — even if it's incomplete, anything you have; second, the Azure AD tenant ID and app registration credentials for SSO setup; and third, a sample of your transaction file format including edge cases you know about.
+
+Client — David Park (CTO): I can get you the schema documentation by Wednesday — fair warning, some of it is in our engineers' heads rather than written down. For Azure AD, I'll have our IT admin Sarah generate the credentials and send them to Arjun directly by end of week. And sample transaction files I can get you today — I'll send them to the shared drive by this afternoon.
+
+Solutions Engineer — Arjun Mehta: Perfect. Sam, based on David's inputs arriving Wednesday and end-of-week, can we have environment provisioned and base configuration done by next Friday?
+
+Implementation Lead — Sam Osei: I can commit to that. I'll open the project in our system today and Arjun and I will have a detailed project plan with weekly milestones in your hands by Friday of this week.
+
+Nina Brooks: David, Wendy — I want to flag something on the compliance reporting requirement. Wendy mentioned this needs to be active from day one. Arjun, is the audit trail module included in the standard implementation scope or is that a separate activation?
+
+Solutions Engineer — Arjun Mehta: It's included, but it requires about two additional days of configuration to set up the custom compliance templates. Wendy, can you share the specific reporting format your regulator expects? If you can get me that by Thursday, I can build the template in parallel with the main pipeline.
+
+Client — Wendy Chao (Head of Ops): I'll send you the regulatory reporting template today — I have it right here. I'll also flag that the regulator specifically looks for tamper-evidence in the audit logs — they'll want to see cryptographic signing or equivalent.
+
+Solutions Engineer — Arjun Mehta: Our audit logs are hash-chained and support export with cryptographic signatures. I'll make sure the compliance package documentation covers that explicitly.
+
+Account Manager — Lisa Fernandez: Excellent. Let's talk about the training plan. Wendy, you mentioned 140 users. We typically do a train-the-trainer approach at this scale — train 8-10 power users who then roll it out to the full team. Does that model work?
+
+Client — Wendy Chao (Head of Ops): We have a dedicated training team, so yes — train-the-trainer works well. But I'd like the initial training session to happen no later than two weeks before go-live so our team has time to practice.
+
+Implementation Lead — Sam Osei: So if we're targeting April 30th go-live, training should be no later than April 16th. I'll schedule that training session now and put it as a fixed milestone in the project plan.
+
+Client — David Park (CTO): One concern I want to raise proactively. Our data team has a strong preference for API-driven access — they want to trigger pipeline runs and query lineage data programmatically, not just through the UI. Is the API documentation solid?
+
+Solutions Engineer — Arjun Mehta: Our REST API is fully documented on our developer portal and the transaction pipeline endpoint supports all the operations your team would need. But I want to be candid — our API for lineage graph queries is still in beta. It works reliably but the documentation is incomplete. I'll personally work with David's engineering lead to make sure they can do what they need.
+
+Nina Brooks: David, I'd like to set us up for a 30-day post-go-live success review. By that point we'll have real usage data and we can identify any gaps in your workflows before they become frustrations. Does 30 days after April 30th — so around June 1st — work for a check-in?
+
+Client — David Park (CTO): Yes. And if you could also set up automated anomaly alerts on our pipeline success rate — I want to know same-day if our daily transaction success rate drops below 99.5%.
+
+Account Manager — Lisa Fernandez: Arjun, is that threshold monitoring something we configure during implementation?
+
+Solutions Engineer — Arjun Mehta: Yes — data quality monitoring thresholds are part of the standard configuration. I'll set up the 99.5% success rate alert plus email and Slack notifications during onboarding. No extra work.
+
+Account Manager — Lisa Fernandez: Wonderful. Let's close with a quick summary of commitments. David's team sends transaction samples today, schema docs Wednesday, Azure AD credentials by end of week. We deliver the project plan Friday, training April 16th, go-live April 30th. Wendy sends the regulatory template today. Arjun sets up compliance templates, API access, and 99.5% monitoring. Nina schedules the 30-day review for June 1st. Any objections or additions?
+
+Client — Wendy Chao (Head of Ops): One addition — can we have a weekly 30-minute status call throughout the implementation? Even just Arjun, Sam, and myself. I like to stay close to progress.
+
+Implementation Lead — Sam Osei: Absolutely. I'll send a recurring calendar invite for Tuesdays at 2pm your time. Does that work Wendy?
+
+Client — Wendy Chao (Head of Ops): Perfect.
+
+Account Manager — Lisa Fernandez: We're off to a great start. Looking forward to making this a success.`
+    }
+  ];
+
+  let currentTxIndex = 0;
+
+  function renderTranscript(idx) {
+    const tx = TRANSCRIPTS[idx];
+    const speakers = tx.speakers;
+    let html = tx.text.replace(/\n/g, '<br><br>');
+    speakers.forEach(s => {
+      const short = s.includes('—') ? s.split('—')[1].trim() : s;
+      html = html.replace(new RegExp(s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ':', 'g'),
+        `<span class="speaker">${s}:</span>`);
+    });
+    document.getElementById('transcript-display').innerHTML = html;
+    document.getElementById('tx-title').textContent = tx.title;
+    document.getElementById('tx-meta').textContent =
+      `${tx.participants} participants · ${tx.duration} · ${tx.department} · ~${tx.decisions} decisions · ~${tx.actions} action items`;
+  }
+
+  function selectTranscript(idx) {
+    currentTxIndex = parseInt(idx);
+    // reset pipeline
+    const stepIds = ['s-ta','s-de','s-ai','s-tp','s-oa','s-es'];
+    stepIds.forEach(id => setAgent(id, 'idle', 'Idle'));
+    document.getElementById('exec-log').innerHTML =
+      '<div class="log-entry" style="color:var(--muted)">Transcript loaded. Click "Run" to start the pipeline simulation…</div>';
+    document.getElementById('sim-decisions').textContent = '—';
+    document.getElementById('sim-actions').textContent = '—';
+    document.getElementById('sim-time').textContent = '—';
+    document.getElementById('run-status').textContent = '';
+    renderTranscript(currentTxIndex);
+  }
+
+  // ── animate confidence bars on load
+  window.addEventListener('load', () => {
+    const bars = [
+      ['pb-ta','pv-ta', 90],
+      ['pb-de','pv-de', 75],
+      ['pb-ai','pv-ai', 71],
+      ['pb-tp','pv-tp', 68],
+      ['pb-oa','pv-oa', 82],
+      ['pb-es','pv-es', 77],
+    ];
+    setTimeout(() => {
+      bars.forEach(([bid, vid, val]) => {
+        document.getElementById(bid).style.width = val + '%';
+        document.getElementById(vid).textContent = val + '%';
+      });
+    }, 300);
+    renderTranscript(0);
+  });
+
+  // ── pipeline simulation
+  function buildSteps(tx) {
+    const d = tx.decisions, a = tx.actions, e = tx.escalations;
+    return [
+      { id:'s-ta', name:'TranscriptAnalyzer', duration:800+tx.text.length/120,
+        msg:`Transcript analysed — ${tx.participants} speakers, ${Math.round(tx.text.split('.').length*0.6)} key points extracted`, tag:'info' },
+      { id:'s-de', name:'DecisionExtractor',  duration:700,
+        msg:`${d} decisions identified across ${tx.participants} participants`, tag:'info' },
+      { id:'s-ai', name:'ActionItemExtractor',duration:900,
+        msg:`${a} action items extracted — ${Math.round(a*0.75)} assigned, ${Math.round(a*0.4)} with hard deadlines`, tag:'info' },
+      { id:'s-tp', name:'TaskPrioritizer',    duration:600,
+        msg:`Tasks prioritised: ${Math.round(a*0.1)}×P0, ${Math.round(a*0.2)}×P1, ${Math.round(a*0.4)}×P2`, tag:'info' },
+      { id:'s-oa', name:'OwnerAssigner',      duration:750,
+        msg:`Owners matched by skill matrix across ${tx.participants} team members`, tag:'success' },
+      { id:'s-es', name:'EscalationDecider',  duration:500,
+        msg: e > 0 ? `⚠ ${e} escalation${e>1?'s':''} triggered — action required` : `✓ No escalations — all tasks within SLA`,
+        tag: e > 0 ? 'warn' : 'success' },
+    ];
+  }
+
+  function setAgent(id, state, statusText) {
+    const el = document.getElementById(id);
+    el.className = 'pipeline-step agent-' + state;
+    el.querySelector('.step-status').textContent = statusText;
+  }
+
+  function log(tag, msg) {
+    const box = document.getElementById('exec-log');
+    const now = new Date();
+    const ts = now.toTimeString().slice(0,8);
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    entry.innerHTML = `<span class="ts">${ts}</span><span class="tag ${tag}">${tag.toUpperCase()}</span><span class="msg">${msg}</span>`;
+    box.appendChild(entry);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  async function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  async function runSimulation() {
+    const btn = document.getElementById('runBtn');
+    btn.disabled = true;
+    btn.classList.add('running');
+    document.getElementById('run-status').textContent = '';
+
+    const tx = TRANSCRIPTS[currentTxIndex];
+    const steps = buildSteps(tx);
+
+    steps.forEach(s => setAgent(s.id, 'idle', 'Idle'));
+    document.getElementById('exec-log').innerHTML = '';
+    document.getElementById('sim-decisions').textContent = '—';
+    document.getElementById('sim-actions').textContent = '—';
+    document.getElementById('sim-time').textContent = '—';
+
+    const start = Date.now();
+    log('info', `Workflow started — Processing: "${tx.title}"`);
+    log('info', `Participants: ${tx.speakers.join(', ')}`);
+
+    for (const step of steps) {
+      setAgent(step.id, 'run', 'Running…');
+      log('info', `→ ${step.name} started`);
+      await delay(Math.round(step.duration));
+      setAgent(step.id, 'done', '✓ Done');
+      log(step.tag, step.msg);
+    }
+
+    const elapsed = ((Date.now() - start) / 1000).toFixed(2);
+    log('success', `Workflow complete in ${elapsed}s — ${tx.decisions} decisions, ${tx.actions} action items, audit trail persisted`);
+
+    document.getElementById('sim-decisions').textContent = tx.decisions;
+    document.getElementById('sim-actions').textContent = tx.actions;
+    document.getElementById('sim-time').textContent = elapsed + 's';
+    document.getElementById('run-status').textContent = `✓ Completed in ${elapsed}s`;
+
+    btn.disabled = false;
+    btn.classList.remove('running');
+  }
+</script>
+</body>
+</html>
