@@ -1,0 +1,45 @@
+CEO: Thanks everyone for joining on short notice. We've had a data breach — customer PII was exposed via an unsecured S3 bucket. This is a severity-1 incident.
+
+CTO: We confirmed the exposure at 2 AM. The bucket was publicly readable for approximately 18 hours. Roughly 45,000 customer records were accessible including names, emails, and phone numbers. No payment data was exposed.
+
+Legal: We have a 72-hour notification obligation under GDPR. The clock started when we confirmed the breach at 2 AM today. So we need to notify affected customers and regulators by Thursday 2 AM.
+
+CEO: What caused this?
+
+CTO: A misconfigured Terraform module was merged Friday. The S3 bucket policy wasn't applying the private ACL. It passed our automated checks because the policy linter had an exception for that bucket prefix.
+
+Security: I need to own this one — I approved that exception three months ago and forgot to remove it after the migration.
+
+CEO: We'll do a full post-mortem later. Right now let's focus on containment and response. CTO, is the bucket locked down?
+
+CTO: Yes, locked at 2:15 AM. We've also audited all other S3 buckets — no other exposures found.
+
+Legal: We need to draft the customer notification email. I'll have a draft ready by noon today. CEO, I'll need your sign-off by 2 PM so we can send before the deadline.
+
+CEO: Confirmed. I'll review and respond by 2 PM.
+
+Security: I'm also recommending we hire a third-party forensics firm to confirm no data was exfiltrated. This strengthens our legal position.
+
+Legal: Agreed, that's a good idea. If we can show no evidence of exfiltration, it may reduce regulatory penalties.
+
+CEO: Approved. Security, get three quotes today and select a vendor by end of business.
+
+Security: I'll have a vendor selected by 5 PM.
+
+CTO: I'm also going to mandatory code freeze until we've audited all IaC templates. No deployments until further notice.
+
+CEO: Agreed. That's a decision — code freeze effective immediately until audit complete. CTO, how long will the audit take?
+
+CTO: Two days. I'll have a clean bill of health or a findings report by Wednesday EOD.
+
+CEO: Good. Also — PR is going to be a concern. Has anyone reached out to our enterprise clients directly?
+
+Sales: Not yet. Two of our enterprise clients have security clauses in their contracts that require breach notification within 24 hours.
+
+Legal: I wasn't aware of that. Sales, I need the specific contract clauses from those two clients within the next hour.
+
+Sales: I'll pull the contracts and send them to Legal by 11 AM.
+
+CEO: Summary of actions: Legal drafts notification by noon, I sign off by 2 PM, Security selects forensics vendor by 5 PM, Sales sends contract clauses to Legal by 11 AM, CTO completes IaC audit by Wednesday EOD, code freeze is in effect now. We reconvene at 6 PM today for status update.
+
+Everyone: Understood.

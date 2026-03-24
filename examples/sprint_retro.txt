@@ -1,0 +1,41 @@
+Manager: Alright team, this is our weekly sprint retrospective. Sprint 14 just wrapped. Let me start — what went well?
+
+Dev1: We finally shipped the notification service. It's been in progress for three sprints so that feels like a win.
+
+Dev2: Code review turnaround was faster this sprint. Average under 4 hours.
+
+Manager: Those are both good. What didn't go well?
+
+Dev1: We underestimated the database migration task. It was scoped at 3 points but ended up being closer to 8.
+
+Dev2: Also the staging environment was down for two days mid-sprint which blocked testing.
+
+QA: From my side, we got test cases late. Stories were being moved to QA with only one day left in the sprint.
+
+Manager: Important feedback. Let's talk actions. Dev1, for estimation — can you add a spike task next sprint for anything touching migrations?
+
+Dev1: Yes, I'll add a half-day spike before estimating any data-layer work going forward.
+
+Manager: Good. For the staging environment, I'm going to escalate this to the infrastructure team. Two days of downtime is unacceptable. I'll send a formal request for an SLA on staging uptime by end of today.
+
+Dev2: That would really help. Also — can we get a dedicated environment for QA that's separate from dev staging?
+
+Manager: I'll include that in the infrastructure request. QA, on the late test cases — can we move story kickoffs to Monday instead of Wednesday?
+
+QA: That would give me the runway I need. Yes, let's do it.
+
+Manager: Decision: story kickoffs move to Monday starting next sprint. Also, sprint 15 capacity is reduced — Dev2 is on leave for 3 days, so let's cap the sprint at 28 points instead of 35.
+
+Dev1: Makes sense.
+
+Manager: One more thing. We need to decide on our testing framework. We've been debating Jest versus Vitest for two sprints now.
+
+Dev2: I've done a spike on both. Vitest is faster and aligns better with our Vite build setup.
+
+QA: I'm fine with either but I'd prefer we decide today so I can update the test templates.
+
+Manager: Decision: we're switching to Vitest. Dev2, please migrate the existing test suite by end of sprint 15. Document the migration steps so everyone can follow along.
+
+Dev2: I'll have the migration done by day 6 and post a guide in Confluence.
+
+Manager: Perfect. Wrap up — Dev1 adds estimation spikes for data work, I escalate staging SLA today, kickoffs move to Monday, sprint capped at 28 points, Vitest migration by day 6. Good sprint everyone. Let's make 15 count.

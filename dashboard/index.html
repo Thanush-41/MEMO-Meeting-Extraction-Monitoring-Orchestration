@@ -1352,65 +1352,84 @@ Account Manager — Lisa Fernandez: We're off to a great start. Looking forward 
   }
 
   function renderCustomResults(data, transcriptText) {
-    const panel  = document.getElementById('results-panel');
-    const steps  = data.steps  || [];
+    const panel   = document.getElementById('results-panel');
+    const steps   = data.steps   || [];
     const summary = data.summary || {};
 
-    /* stat chips */
-    const speakers = new Set();
-    transcriptText.split('\n').forEach(l => {
-      const m = l.match(/^([^:]{2,40}):/);
-      if (m) speakers.add(m[1].trim());
-    });
+    /* ── stat chips (use actual API field names) ── */
     const chips = [
-      { val: speakers.size || '?', lbl: 'Speakers' },
-      { val: summary.total_decisions  || 0, lbl: 'Decisions' },
-      { val: summary.total_action_items || 0, lbl: 'Action Items' },
-      { val: summary.total_escalations || 0, lbl: 'Escalations' },
-      { val: steps.length,                   lbl: 'Agents Run' },
+      { val: summary.speakers  || 0, lbl: 'Speakers' },
+      { val: summary.decisions || 0, lbl: 'Decisions' },
+      { val: summary.action_items || 0, lbl: 'Action Items' },
+      { val: summary.escalations  || 0, lbl: 'Escalations' },
+      { val: steps.length,            lbl: 'Agents Run' },
     ];
     document.getElementById('res-chips').innerHTML = chips
       .map(c => `<div class="stat-chip"><div class="chip-val">${c.val}</div><div class="chip-lbl">${c.lbl}</div></div>`)
       .join('');
 
-    /* agent step cards */
+    /* ── agent step cards (confidence is already 0-100 in API) ── */
+    const agentLabels = {
+      TranscriptAnalyzer: '📝 Transcript Analyzer',
+      DecisionExtractor:  '🔍 Decision Extractor',
+      ActionItemExtractor:'📋 Action Item Extractor',
+      TaskPrioritizer:    '🎯 Task Prioritizer',
+      OwnerAssigner:      '👤 Owner Assigner',
+      EscalationDecider:  '⚠ Escalation Decider',
+    };
     document.getElementById('res-steps').innerHTML = steps.map(s => {
-      const conf = Math.round((s.confidence || 0) * 100);
+      const conf = Math.min(100, Math.round(s.confidence || 0));
       const dur  = s.duration_ms != null ? s.duration_ms + ' ms' : '—';
-      const items = s.output_summary ? `<div class="sc-detail">${escHtml(s.output_summary)}</div>` : '';
+      const out  = s.output || {};
+      let detail = '';
+      if (s.agent === 'TranscriptAnalyzer')
+        detail = `${out.speakers || 0} speakers · ${out.topics || 0} topics`;
+      else if (s.agent === 'DecisionExtractor')
+        detail = `${out.total || 0} decisions (${out.explicit || 0} explicit)`;
+      else if (s.agent === 'ActionItemExtractor')
+        detail = `${out.total || 0} items · ${out.assigned || 0} assigned`;
+      else if (s.agent === 'TaskPrioritizer') {
+        const pc = out.priority_counts || {};
+        detail = Object.entries(pc).filter(([,v])=>v>0).map(([k,v])=>`${v}×${k}`).join(' · ') || 'prioritized';
+      } else if (s.agent === 'OwnerAssigner')
+        detail = `${out.assigned || 0} items assigned`;
+      else if (s.agent === 'EscalationDecider')
+        detail = `${out.total_escalations || 0} escalations`;
       return `<div class="step-card">
-        <div class="sc-name">${escHtml(s.agent_name || s.step_id || 'Agent')}</div>
+        <div class="sc-name">${escHtml(agentLabels[s.agent] || s.agent || 'Agent')}</div>
         <div class="sc-conf">Confidence: ${conf}% &nbsp;·&nbsp; ${dur}</div>
         <div class="conf-bar"><div class="conf-fill" style="width:${conf}%"></div></div>
-        ${items}
+        ${detail ? `<div class="sc-detail">${escHtml(detail)}</div>` : ''}
       </div>`;
     }).join('');
 
-    /* action items table */
-    const actions = summary.action_items || [];
+    /* ── action items table (from summary.top_action_items) ── */
+    const actions = summary.top_action_items || [];
     document.getElementById('res-actions-body').innerHTML = actions.length
       ? actions.map(a => `<tr>
-          <td>${escHtml(a.description || a.task || '—')}</td>
-          <td>${escHtml(a.assigned_to || '—')}</td>
+          <td>${escHtml(a.title || a.description || '—')}</td>
+          <td>${escHtml(a.assignee || a.assigned_to || '—')}</td>
           <td>${escHtml(a.urgency || a.priority || '—')}</td>
-          <td>${escHtml(a.deadline || '—')}</td>
+          <td>${escHtml(a.deadline ? a.deadline.split(' ')[0] : '—')}</td>
         </tr>`).join('')
       : '<tr><td colspan="4" style="color:var(--muted);text-align:center">No action items extracted</td></tr>';
 
-    /* decisions table */
-    const decisions = summary.decisions || [];
-    document.getElementById('res-decisions-body').innerHTML = decisions.length
-      ? decisions.map(d => `<tr>
-          <td>${escHtml(d.decision_type || d.type || '—')}</td>
+    /* ── decisions table (from DecisionExtractor step output) ── */
+    const decStep  = steps.find(s => s.agent === 'DecisionExtractor');
+    const decItems = (decStep && decStep.output && decStep.output.items) || [];
+    document.getElementById('res-decisions-body').innerHTML = decItems.length
+      ? decItems.map(d => `<tr>
+          <td>${escHtml(d.type || d.decision_type || '—')}</td>
           <td>${escHtml(d.description || d.content || '—')}</td>
         </tr>`).join('')
       : '<tr><td colspan="2" style="color:var(--muted);text-align:center">No decisions extracted</td></tr>';
 
-    /* escalations */
-    const escalations = summary.escalations || [];
-    const escWrap = document.getElementById('res-escalations-wrap');
-    if (escalations.length) {
-      document.getElementById('res-escalations-body').innerHTML = escalations
+    /* ── escalations (from EscalationDecider step output) ── */
+    const escStep  = steps.find(s => s.agent === 'EscalationDecider');
+    const escItems = (escStep && escStep.output && escStep.output.escalations) || [];
+    const escWrap  = document.getElementById('res-escalations-wrap');
+    if (escItems.length) {
+      document.getElementById('res-escalations-body').innerHTML = escItems
         .map(e => `<tr>
           <td>${escHtml(e.item || e.description || '—')}</td>
           <td>${escHtml(e.reason || '—')}</td>
