@@ -3,9 +3,6 @@
   "framework": null,
   "buildCommand": "",
   "outputDirectory": "dashboard",
-  "functions": {
-    "api/process.py": { "runtime": "python3.12", "maxDuration": 30 }
-  },
   "routes": [
     {
       "src": "/api/process",
