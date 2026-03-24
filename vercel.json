@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "name": "memo-meeting-intelligence",
+  "buildCommand": null,
+  "outputDirectory": "dashboard",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
