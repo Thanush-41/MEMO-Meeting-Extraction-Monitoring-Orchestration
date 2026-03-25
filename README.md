@@ -143,5 +143,6 @@ See `config/` directory for configuration options including:
 ## License
 
 MIT License
-#   M E M O - M e e t i n g - E x t r a c t i o n - M o n i t o r i n g - O r c h e s t r a t i o n  
+#   M E M O - M e e t i n g - E x t r a c t i o n - M o n i t o r i n g - O r c h e s t r a t i o n 
+ 
  
