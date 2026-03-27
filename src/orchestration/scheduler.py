@@ -10,7 +10,7 @@ from __future__ import annotations
 import asyncio
 import heapq
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from enum import Enum, auto
 from typing import Any, Callable, Dict, List, Optional, Set
 import uuid
@@ -181,8 +181,8 @@ class TaskScheduler:
                 task.enabled = True
                 
                 # Re-schedule if next execution is in the past
-                if task.next_execution and task.next_execution < datetime.utcnow():
-                    task.next_execution = datetime.utcnow() + timedelta(seconds=1)
+                if task.next_execution and task.next_execution < datetime.now(timezone.utc):
+                    task.next_execution = datetime.now(timezone.utc) + timedelta(seconds=1)
                 
                 heapq.heappush(
                     self._queue,
@@ -222,7 +222,7 @@ class TaskScheduler:
     
     async def _process_due_tasks(self) -> None:
         """Process tasks that are due for execution."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         
         while self._queue and self._queue[0].scheduled_time <= now:
             async with self._lock:
@@ -257,7 +257,7 @@ class TaskScheduler:
         """Execute a scheduled task."""
         try:
             task.execution_count += 1
-            task.last_execution = datetime.utcnow()
+            task.last_execution = datetime.now(timezone.utc)
             
             if task.workflow_id and self._workflow_executor:
                 await self._workflow_executor(task.workflow_id, task.payload)

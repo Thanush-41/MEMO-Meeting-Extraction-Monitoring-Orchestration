@@ -12,7 +12,7 @@ import copy
 import json
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum, auto
 from typing import Any, Callable, Dict, List, Optional, Set
 from collections import defaultdict
@@ -297,7 +297,7 @@ class StateManager:
             if hasattr(state, key):
                 setattr(state, key, value)
         
-        state.last_activity = datetime.utcnow()
+        state.last_activity = datetime.now(timezone.utc)
         return state
     
     async def get_agent_state(self, agent_id: str) -> Optional[AgentState]:
@@ -425,7 +425,7 @@ class StateManager:
         older_than_hours: int = 24
     ) -> int:
         """Remove completed workflow states older than specified hours."""
-        cutoff = datetime.utcnow()
+        cutoff = datetime.now(timezone.utc)
         count = 0
         
         to_remove = []

@@ -14,7 +14,7 @@ import asyncio
 import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum, auto
 from typing import Any, Callable, Dict, List, Optional, TypeVar, Generic
 
@@ -111,8 +111,8 @@ class BaseAgent(ABC, Generic[T]):
         self.status = AgentStatus.IDLE
         self._recovery_strategies: List[RecoveryStrategy] = []
         self._audit_events: List[Dict[str, Any]] = []
-        self._created_at = datetime.utcnow()
-        self._last_activity = datetime.utcnow()
+        self._created_at = datetime.now(timezone.utc)
+        self._last_activity = datetime.now(timezone.utc)
         self._error_count = 0
         self._success_count = 0
         
@@ -145,7 +145,7 @@ class BaseAgent(ABC, Generic[T]):
         - Audit logging
         - Performance tracking
         """
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         self.status = AgentStatus.PROCESSING
         self._last_activity = start_time
         
@@ -227,7 +227,7 @@ class BaseAgent(ABC, Generic[T]):
                 delay = self.config.retry_delay_base * (2 ** (attempt - 1))
                 await asyncio.sleep(delay)
         
-        end_time = datetime.utcnow()
+        end_time = datetime.now(timezone.utc)
         execution_time = (end_time - start_time).total_seconds() * 1000
         
         # Construct final result if no successful result
@@ -311,7 +311,7 @@ class BaseAgent(ABC, Generic[T]):
     ) -> None:
         """Log an audit event."""
         event = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "agent_id": self.id,
             "agent_name": self.name,
             "agent_type": self.agent_type,

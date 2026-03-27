@@ -133,6 +133,10 @@ class TranscriptAnalyzer(BaseAgent[TranscriptInput]):
         )
         
         try:
+            # Guard against empty input
+            if not input_data.transcript_text or not input_data.transcript_text.strip():
+                return AgentResult(success=False, error="Empty transcript text provided", confidence=0.0)
+
             # Parse transcript into segments
             segments = self._parse_segments(input_data.transcript_text)
             

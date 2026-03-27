@@ -11,7 +11,7 @@ import asyncio
 import json
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum, auto
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Union
@@ -351,7 +351,7 @@ class AuditLogger:
                 decision.reviewed = True
                 decision.reviewer = reviewer
                 decision.review_outcome = outcome
-                decision.review_timestamp = datetime.utcnow()
+                decision.review_timestamp = datetime.now(timezone.utc)
                 decision.validation_notes = notes
                 return True
         return False
@@ -424,7 +424,7 @@ class AuditLogger:
     def _format_markdown(self, events: List[AuditEvent]) -> str:
         """Format events as markdown report."""
         lines = ["# Audit Trail Report\n"]
-        lines.append(f"Generated: {datetime.utcnow().isoformat()}\n")
+        lines.append(f"Generated: {datetime.now(timezone.utc).isoformat()}\n")
         lines.append(f"Total Events: {len(events)}\n")
         lines.append("\n## Events\n")
         

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from enum import Enum, auto
 from typing import Any, Callable, Dict, List, Optional
 import functools
@@ -141,7 +141,7 @@ class CircuitBreaker:
     
     async def _check_call_allowed(self) -> tuple[bool, str]:
         """Check if a call is allowed based on circuit state."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         
         if self._state == CircuitState.CLOSED:
             return True, ""
@@ -171,7 +171,7 @@ class CircuitBreaker:
         """Record a successful call."""
         async with self._lock:
             self._stats.successful_calls += 1
-            self._stats.last_success_time = datetime.utcnow()
+            self._stats.last_success_time = datetime.now(timezone.utc)
             self._stats.consecutive_successes += 1
             self._stats.consecutive_failures = 0
             
@@ -189,7 +189,7 @@ class CircuitBreaker:
         """Record a failed call."""
         async with self._lock:
             self._stats.failed_calls += 1
-            self._stats.last_failure_time = datetime.utcnow()
+            self._stats.last_failure_time = datetime.now(timezone.utc)
             self._stats.consecutive_failures += 1
             self._stats.consecutive_successes = 0
             
@@ -219,7 +219,7 @@ class CircuitBreaker:
         self._state = new_state
         
         if new_state == CircuitState.OPEN:
-            self._opened_at = datetime.utcnow()
+            self._opened_at = datetime.now(timezone.utc)
             self._half_open_calls = 0
         elif new_state == CircuitState.HALF_OPEN:
             self._half_open_calls = 0

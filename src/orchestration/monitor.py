@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from enum import Enum, auto
 from typing import Any, Callable, Dict, List, Optional, Set
 from collections import defaultdict
@@ -161,7 +161,7 @@ class WorkflowMonitor:
         execution_id: str
     ) -> None:
         """Track the start of an execution."""
-        self._execution_starts[execution_id] = datetime.utcnow()
+        self._execution_starts[execution_id] = datetime.now(timezone.utc)
         
         if workflow_id not in self._workflow_metrics:
             self._workflow_metrics[workflow_id] = WorkflowMetrics(workflow_id=workflow_id)
@@ -179,7 +179,7 @@ class WorkflowMonitor:
         start_time = self._execution_starts.pop(execution_id, None)
         
         if start_time:
-            duration = (datetime.utcnow() - start_time).total_seconds()
+            duration = (datetime.now(timezone.utc) - start_time).total_seconds()
             self._execution_durations[workflow_id].append(duration)
             
             # Keep only last 100 durations
@@ -275,7 +275,7 @@ class WorkflowMonitor:
     
     async def _check_sla_compliance(self) -> None:
         """Check SLA compliance for active executions."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         
         for execution_id, start_time in self._execution_starts.items():
             elapsed_hours = (now - start_time).total_seconds() / 3600
@@ -423,7 +423,7 @@ class WorkflowMonitor:
             execution_id=execution_id,
             step_id=step_id,
             recommended_actions=recommended_actions or [],
-            expires_at=datetime.utcnow() + timedelta(hours=24)
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=24)
         )
         
         # Store alert
@@ -461,7 +461,7 @@ class WorkflowMonitor:
         if alert_id in self._active_alerts:
             alert = self._active_alerts[alert_id]
             alert.resolved = True
-            alert.resolved_at = datetime.utcnow()
+            alert.resolved_at = datetime.now(timezone.utc)
             
             # Update metrics
             if alert.workflow_id and alert.workflow_id in self._workflow_metrics:

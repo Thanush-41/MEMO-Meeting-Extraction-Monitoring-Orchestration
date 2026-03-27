@@ -108,8 +108,9 @@ class TestTranscriptAnalyzer:
         
         result = await agent.execute(input_data, agent_context)
         
-        # Should handle empty input gracefully
-        assert result.data is not None
+        # Should reject empty input
+        assert not result.success
+        assert result.error is not None
 
 
 class TestDecisionExtractor:

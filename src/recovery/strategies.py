@@ -11,7 +11,7 @@ from __future__ import annotations
 import asyncio
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum, auto
 from typing import Any, Callable, Dict, List, Optional, Type
 
@@ -174,7 +174,7 @@ class FallbackStrategy(RecoveryStrategy):
         return self.fallback_handler is not None or self.default_value is not None
     
     async def execute(self, context: RecoveryContext) -> RecoveryResult:
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         
         try:
             if self.fallback_handler:
@@ -185,7 +185,7 @@ class FallbackStrategy(RecoveryStrategy):
             else:
                 result_data = self.default_value
             
-            duration = (datetime.utcnow() - start_time).total_seconds() * 1000
+            duration = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
             
             return RecoveryResult(
                 action_taken=RecoveryAction.FALLBACK,

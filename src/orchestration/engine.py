@@ -11,7 +11,7 @@ import asyncio
 import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from enum import Enum, auto
 from typing import Any, Callable, Dict, List, Optional, Type, Union
 
@@ -183,7 +183,7 @@ class WorkflowEngine:
             WorkflowExecutionResult with outcomes and audit trail
         """
         execution_id = execution_id or str(uuid.uuid4())
-        started_at = datetime.utcnow()
+        started_at = datetime.now(timezone.utc)
         
         # Log start
         await self.audit_logger.log(AuditEvent(
@@ -243,7 +243,7 @@ class WorkflowEngine:
                 error_message=str(e)
             ))
             
-            completed_at = datetime.utcnow()
+            completed_at = datetime.now(timezone.utc)
             return WorkflowExecutionResult(
                 execution_id=execution_id,
                 workflow_id=workflow.id,
@@ -261,7 +261,7 @@ class WorkflowEngine:
         execution_id: str
     ) -> WorkflowExecutionResult:
         """Internal workflow execution logic."""
-        started_at = datetime.utcnow()
+        started_at = datetime.now(timezone.utc)
         step_results = {}
         
         # Build dependency graph
@@ -307,7 +307,7 @@ class WorkflowEngine:
                 completed_steps.add(step.id)
                 state.current_step = len(completed_steps)
         
-        completed_at = datetime.utcnow()
+        completed_at = datetime.now(timezone.utc)
         
         # Gather output
         output = {}
@@ -340,7 +340,7 @@ class WorkflowEngine:
         await self.state_manager.update_step(
             execution_id=state.execution_id,
             step_id=step.id,
-            updates={"status": "running", "started_at": datetime.utcnow()}
+            updates={"status": "running", "started_at": datetime.now(timezone.utc)}
         )
         
         # Check skip condition
@@ -406,7 +406,7 @@ class WorkflowEngine:
                         step_id=step.id,
                         updates={
                             "status": "completed",
-                            "completed_at": datetime.utcnow(),
+                            "completed_at": datetime.now(timezone.utc),
                             "output_data": result.data
                         }
                     )
