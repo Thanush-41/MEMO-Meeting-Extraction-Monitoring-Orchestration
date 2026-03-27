@@ -345,7 +345,32 @@
     .demo-result-item .dri-val { font-size:22px; font-weight:700; color:var(--accent); }
     .demo-result-item .dri-lbl { font-size:9px; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); margin-top:4px; }
     .sys-badge { animation:badgePulse 2s ease-in-out infinite; }
-  </style>
+      /* ══ RESPONSIVE UI ══ */
+    @media (max-width: 1024px) {
+      .grid-4 { grid-template-columns: repeat(2, 1fr) !important; }
+      header { flex-wrap: wrap; }
+      .nav-tabs { margin-left: 0; width: 100%; overflow-x: auto; padding-bottom: 4px; }
+      .nav-tabs button { white-space: nowrap; }
+    }
+    @media (max-width: 768px) {
+      .grid-2, .grid-3, .grid-4, .cb-grid, .step-cards, .demo-result-items { grid-template-columns: 1fr !important; }
+      .page { padding: 16px 12px; }
+      .pipeline { flex-wrap: nowrap !important; overflow-x: auto !important; padding: 16px; justify-content: flex-start !important; }
+      .pipeline-step { min-width: 100px; }
+      .card { padding: 16px; }
+      .demo-flow { padding: 16px 0; }
+      .upload-panel, .results-panel { padding: 16px; min-width: 0; }
+      header { padding: 12px 16px; }
+      header .logo { font-size: 16px; }
+      header .subtitle { font-size: 11px; }
+      header .badge { display: none; }
+      .log-box { height: 200px; }
+      .up-input { min-width: 100%; }
+      .participants-row { flex-direction: column; align-items: flex-start; }
+      .demo-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+      .demo-run { width: 100%; justify-content: center; }
+    }
+</style>
 </head>
 <body>
 
