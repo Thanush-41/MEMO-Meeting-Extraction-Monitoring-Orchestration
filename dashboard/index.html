@@ -291,6 +291,60 @@
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ══ ENHANCED AGENTIC UI ══ */
+    header { position:relative; background:linear-gradient(180deg,#161b22 0%,#131820 100%); }
+    header::after { content:''; position:absolute; bottom:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,var(--accent),var(--purple),var(--accent2),transparent); background-size:200% 100%; animation:headerGlow 3s ease-in-out infinite; }
+    @keyframes headerGlow { 0%,100%{background-position:200% 0} 50%{background-position:-200% 0} }
+    .card { transition:border-color .3s,box-shadow .3s,transform .2s; }
+    .card:hover { border-color:rgba(88,166,255,.2); box-shadow:0 4px 24px rgba(88,166,255,.06); transform:translateY(-1px); }
+    .page.active { animation:pageIn .35s ease; }
+    @keyframes pageIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+    .nav-tabs button { position:relative; }
+    .nav-tabs button.active::after { content:''; position:absolute; bottom:-1px; left:20%; right:20%; height:2px; background:var(--accent); border-radius:2px; }
+    .logo { background:linear-gradient(135deg,var(--accent),var(--purple)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .badge { animation:badgePulse 2s ease-in-out infinite; }
+    @keyframes badgePulse { 0%,100%{box-shadow:0 0 0 0 rgba(63,185,80,.3)} 50%{box-shadow:0 0 0 4px rgba(63,185,80,0)} }
+
+    /* ══ ANIMATED DEMO PIPELINE ══ */
+    .demo-container { margin-top:24px; position:relative; overflow:hidden; }
+    .demo-container::before { content:''; position:absolute; top:0; left:0; right:0; bottom:0; background:radial-gradient(ellipse at 50% 0%,rgba(88,166,255,.03) 0%,transparent 70%); pointer-events:none; }
+    .demo-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+    .demo-run { background:linear-gradient(135deg,var(--accent),var(--purple)); color:#fff; border:none; padding:9px 22px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; transition:all .2s; display:flex; align-items:center; gap:6px; }
+    .demo-run:hover { opacity:.9; transform:scale(1.03); box-shadow:0 0 20px rgba(88,166,255,.3); }
+    .demo-run:disabled { opacity:.4; cursor:not-allowed; transform:none; box-shadow:none; }
+    .demo-input-box { background:#010409; border:1px solid var(--border); border-radius:8px; padding:14px 16px; font-family:'Cascadia Code','Fira Code',monospace; font-size:11px; color:#7d8590; margin-bottom:20px; line-height:1.8; position:relative; overflow:hidden; }
+    .demo-input-box .hl { color:var(--accent); font-weight:600; }
+    .demo-input-box .hl-g { color:var(--accent2); font-weight:600; }
+    .demo-input-box .hl-w { color:var(--warn); font-weight:600; }
+    .demo-input-box::after { content:''; position:absolute; top:0; right:0; bottom:0; width:60px; background:linear-gradient(90deg,transparent,#010409); pointer-events:none; }
+    .demo-flow { display:flex; align-items:flex-start; gap:0; overflow-x:auto; padding:20px 8px; margin:0 -8px; }
+    .demo-node { display:flex; flex-direction:column; align-items:center; min-width:128px; position:relative; z-index:2; }
+    .demo-node-icon { width:58px; height:58px; border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:24px; background:var(--surface2); border:2px solid var(--border); transition:all .5s ease; position:relative; }
+    .demo-node.processing .demo-node-icon { border-color:var(--accent); background:rgba(88,166,255,.08); box-shadow:0 0 24px rgba(88,166,255,.25),inset 0 0 16px rgba(88,166,255,.05); animation:nodePulse 1.2s ease infinite; }
+    .demo-node.complete .demo-node-icon { border-color:var(--accent2); background:rgba(63,185,80,.08); box-shadow:0 0 16px rgba(63,185,80,.15); }
+    @keyframes nodePulse { 0%,100%{box-shadow:0 0 16px rgba(88,166,255,.15),inset 0 0 12px rgba(88,166,255,.03)} 50%{box-shadow:0 0 28px rgba(88,166,255,.35),inset 0 0 20px rgba(88,166,255,.08)} }
+    .demo-node-label { font-size:9px; font-weight:700; margin-top:10px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); }
+    .demo-node-name { font-size:10px; font-weight:600; color:var(--text); text-align:center; margin-top:3px; }
+    .demo-node-status { font-size:9px; font-weight:700; padding:2px 8px; border-radius:10px; margin-top:6px; text-transform:uppercase; letter-spacing:.5px; background:rgba(125,133,144,.1); color:var(--muted); transition:all .3s; }
+    .demo-node.processing .demo-node-status { background:rgba(88,166,255,.15); color:var(--accent); }
+    .demo-node.complete .demo-node-status { background:rgba(63,185,80,.15); color:var(--accent2); }
+    .demo-node-output { margin-top:8px; font-size:9px; color:var(--muted); text-align:center; max-width:130px; min-height:30px; opacity:0; transform:translateY(6px); transition:opacity .5s,transform .5s; line-height:1.5; }
+    .demo-node.complete .demo-node-output { opacity:1; transform:translateY(0); }
+    .demo-connector { width:36px; height:2px; background:var(--border); margin-top:28px; position:relative; flex-shrink:0; overflow:visible; }
+    .demo-connector .demo-particle { position:absolute; top:-3px; left:-10px; width:10px; height:8px; border-radius:4px; background:var(--accent); opacity:0; box-shadow:0 0 10px var(--accent),0 0 20px rgba(88,166,255,.3); filter:blur(0.5px); }
+    .demo-connector.active { background:linear-gradient(90deg,var(--accent2),var(--border)); }
+    .demo-connector.active .demo-particle { opacity:1; animation:particleFlow .5s ease-in-out forwards; }
+    @keyframes particleFlow { 0%{left:-10px;opacity:0} 15%{opacity:1} 85%{opacity:1} 100%{left:calc(100% + 10px);opacity:0} }
+    .demo-results { margin-top:20px; background:linear-gradient(135deg,rgba(22,27,34,.8),rgba(28,35,48,.8)); border:1px solid var(--border); border-radius:12px; padding:18px; opacity:0; transform:translateY(10px) scale(.98); transition:all .5s ease; backdrop-filter:blur(8px); }
+    .demo-results.visible { opacity:1; transform:translateY(0) scale(1); }
+    .demo-results-title { font-size:13px; font-weight:700; color:var(--accent2); margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+    .demo-result-items { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+    .demo-result-item { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:10px 12px; text-align:center; transition:border-color .3s; }
+    .demo-result-item:hover { border-color:rgba(88,166,255,.3); }
+    .demo-result-item .dri-val { font-size:22px; font-weight:700; color:var(--accent); }
+    .demo-result-item .dri-lbl { font-size:9px; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); margin-top:4px; }
+    .sys-badge { animation:badgePulse 2s ease-in-out infinite; }
   </style>
 </head>
 <body>
@@ -302,6 +356,7 @@
   </div>
   <nav class="nav-tabs">
     <button class="active" onclick="showPage('overview',this)">Overview</button>
+    <button onclick="showPage('agentinfo',this)">AgentInfo</button>
     <button onclick="showPage('pipeline',this)">Pipeline</button>
     <button onclick="showPage('tests',this)">Test Results</button>
     <button onclick="showPage('audit',this)">Audit Trail</button>
@@ -405,6 +460,129 @@
     </table>
   </div>
 
+</div>
+
+<!-- ══════════════════════════════════════════════ AGENTINFO ══ -->
+<div id="page-agentinfo" class="page">
+  <div style="max-width:960px;margin:0 auto">
+    <div class="card" style="margin-bottom:24px;border-left:3px solid var(--accent)">
+      <h2 style="font-size:22px;font-weight:700;margin-bottom:8px">📝 What is MEMO?</h2>
+      <p style="color:var(--muted);font-size:14px;line-height:1.8">MEMO (Meeting Extraction, Monitoring &amp; Orchestration) is a multi-agent intelligence system that transforms raw, unstructured meeting transcripts into structured, actionable intelligence. Instead of manually reviewing meeting notes, MEMO automatically identifies who said what, what decisions were made, what action items were assigned, and which items need immediate escalation.</p>
+    </div>
+    <div class="card" style="margin-bottom:24px">
+      <h3 style="font-size:16px;font-weight:700;margin-bottom:16px">⚡ How It Works</h3>
+      <p style="color:var(--muted);font-size:13px;line-height:1.7;margin-bottom:16px">You paste or upload a meeting transcript. MEMO processes it through a pipeline of 6 autonomous agents that run sequentially, each building on the previous agent's output:</p>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">
+        <div style="background:var(--surface2);border-radius:10px;padding:16px;border:1px solid var(--border)">
+          <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Step 1 — Extraction</div>
+          <div style="font-size:13px;font-weight:600;margin-bottom:4px">🔍 TranscriptAnalyzer</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.6">Parses the raw transcript to identify speakers, topics, and conversation segments. Structures the unformatted text into analyzable sections.</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:10px;padding:16px;border:1px solid var(--border)">
+          <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Step 2 — Extraction</div>
+          <div style="font-size:13px;font-weight:600;margin-bottom:4px">📋 DecisionExtractor</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.6">Identifies explicit and implicit decisions made during the meeting. Captures decision context, rationale, and who was involved in making each decision.</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:10px;padding:16px;border:1px solid var(--border)">
+          <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Step 3 — Extraction</div>
+          <div style="font-size:13px;font-weight:600;margin-bottom:4px">✅ ActionItemExtractor</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.6">Pulls out all action items, to-dos, and follow-ups mentioned during the meeting. Captures deadlines, responsible parties, and dependencies.</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:10px;padding:16px;border:1px solid var(--border)">
+          <div style="font-size:11px;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Step 4 — Decision</div>
+          <div style="font-size:13px;font-weight:600;margin-bottom:4px">📊 TaskPrioritizer</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.6">Evaluates each extracted action item and assigns a priority level (Critical, High, Medium, Low) based on urgency, impact, and deadlines.</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:10px;padding:16px;border:1px solid var(--border)">
+          <div style="font-size:11px;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Step 5 — Decision</div>
+          <div style="font-size:13px;font-weight:600;margin-bottom:4px">👤 OwnerAssigner</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.6">Determines who should own each action item based on context clues, mentions, and responsibility patterns identified in the transcript.</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:10px;padding:16px;border:1px solid var(--border)">
+          <div style="font-size:11px;font-weight:700;color:var(--error);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Step 6 — Decision</div>
+          <div style="font-size:13px;font-weight:600;margin-bottom:4px">🚨 EscalationDecider</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.6">Evaluates whether any items require immediate escalation — blocked tasks, missed deadlines, cross-team dependencies, or unresolved conflicts.</div>
+        </div>
+      </div>
+    </div>
+    <div class="card demo-container" style="margin-bottom:24px">
+      <div class="demo-header">
+        <h3 style="font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px">&#127916; Live Agent Pipeline Demo</h3>
+        <button class="demo-run" id="demo-btn" onclick="startDemo()">&#9654; Run Demo</button>
+      </div>
+      <p style="color:var(--muted);font-size:12px;margin-bottom:14px">Watch how MEMO processes a meeting transcript through all 6 agents in real-time</p>
+      <div class="demo-input-box">
+        <span class="hl">Alice:</span> Let's discuss the Q3 roadmap. The API deadline is <span class="hl-w">Friday</span>.<br>
+        <span class="hl">Bob:</span> I'll handle the <span class="hl-g">backend integration</span>. Need auth tokens from DevOps.<br>
+        <span class="hl">Alice:</span> Agreed. Bob, please have the <span class="hl-g">API docs</span> ready by <span class="hl-w">Thursday</span>.<br>
+        <span class="hl">Charlie:</span> I'm <span style="color:var(--error)">blocked</span> on the frontend — waiting for Bob's endpoints.
+      </div>
+      <div class="demo-flow">
+        <div class="demo-node" id="dn-1"><div class="demo-node-icon">&#128270;</div><div class="demo-node-label">Step 1</div><div class="demo-node-name">TranscriptAnalyzer</div><div class="demo-node-status">Idle</div><div class="demo-node-output">3 speakers &#183; 4 segments parsed</div></div>
+        <div class="demo-connector" id="dc-1"><div class="demo-particle"></div></div>
+        <div class="demo-node" id="dn-2"><div class="demo-node-icon">&#128203;</div><div class="demo-node-label">Step 2</div><div class="demo-node-name">DecisionExtractor</div><div class="demo-node-status">Idle</div><div class="demo-node-output">2 decisions: API priority + deadline</div></div>
+        <div class="demo-connector" id="dc-2"><div class="demo-particle"></div></div>
+        <div class="demo-node" id="dn-3"><div class="demo-node-icon">&#9989;</div><div class="demo-node-label">Step 3</div><div class="demo-node-name">ActionItemExtractor</div><div class="demo-node-status">Idle</div><div class="demo-node-output">3 actions: API, docs, auth tokens</div></div>
+        <div class="demo-connector" id="dc-3"><div class="demo-particle"></div></div>
+        <div class="demo-node" id="dn-4"><div class="demo-node-icon">&#128200;</div><div class="demo-node-label">Step 4</div><div class="demo-node-name">TaskPrioritizer</div><div class="demo-node-status">Idle</div><div class="demo-node-output">P1: API &#183; P2: Docs, Tokens</div></div>
+        <div class="demo-connector" id="dc-4"><div class="demo-particle"></div></div>
+        <div class="demo-node" id="dn-5"><div class="demo-node-icon">&#128100;</div><div class="demo-node-label">Step 5</div><div class="demo-node-name">OwnerAssigner</div><div class="demo-node-status">Idle</div><div class="demo-node-output">Bob &#8594; API, Docs &#183; DevOps &#8594; Tokens</div></div>
+        <div class="demo-connector" id="dc-5"><div class="demo-particle"></div></div>
+        <div class="demo-node" id="dn-6"><div class="demo-node-icon">&#128680;</div><div class="demo-node-label">Step 6</div><div class="demo-node-name">EscalationDecider</div><div class="demo-node-status">Idle</div><div class="demo-node-output">&#9888; Charlie blocked &#8594; Escalate</div></div>
+      </div>
+      <div class="demo-results" id="demo-results">
+        <div class="demo-results-title">&#9989; Pipeline Complete — 6 agents processed in 4.2s</div>
+        <div class="demo-result-items">
+          <div class="demo-result-item"><div class="dri-val">2</div><div class="dri-lbl">Decisions</div></div>
+          <div class="demo-result-item"><div class="dri-val">3</div><div class="dri-lbl">Action Items</div></div>
+          <div class="demo-result-item"><div class="dri-val">3</div><div class="dri-lbl">Assigned</div></div>
+          <div class="demo-result-item"><div class="dri-val" style="color:var(--error)">1</div><div class="dri-lbl">Escalations</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:24px">
+      <h3 style="font-size:16px;font-weight:700;margin-bottom:14px">&#127919; Real-World Use Cases</h3>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">
+        <div style="background:var(--surface2);border-radius:10px;padding:14px;border-left:3px solid var(--accent)">
+          <div style="font-size:13px;font-weight:600;margin-bottom:4px">Engineering Standups</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.6">Automatically extract blockers, decisions, and assigned tasks from daily standup transcripts — no more forgotten action items.</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:10px;padding:14px;border-left:3px solid var(--accent2)">
+          <div style="font-size:13px;font-weight:600;margin-bottom:4px">Board Meeting Minutes</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.6">Turn lengthy board meeting recordings into structured minutes with clear decisions, action items, and accountability assignments.</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:10px;padding:14px;border-left:3px solid var(--warn)">
+          <div style="font-size:13px;font-weight:600;margin-bottom:4px">Client Call Tracking</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.6">Capture client requirements, commitments, and follow-up tasks from sales or customer success calls to ensure nothing falls through the cracks.</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:10px;padding:14px;border-left:3px solid var(--purple)">
+          <div style="font-size:13px;font-weight:600;margin-bottom:4px">Sprint Planning &amp; Retrospectives</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.6">Extract sprint goals, assigned stories, retrospective action items, and improvement commitments from agile ceremonies.</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h3 style="font-size:16px;font-weight:700;margin-bottom:14px">🏗️ Architecture</h3>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+        <div style="text-align:center;padding:16px;background:var(--surface2);border-radius:10px;border:1px solid var(--border)">
+          <div style="font-size:24px;margin-bottom:8px">🔄</div>
+          <div style="font-size:12px;font-weight:700;margin-bottom:4px">Orchestration Engine</div>
+          <div style="font-size:11px;color:var(--muted)">Coordinates all 6 agents in sequence, managing state and message passing between each step.</div>
+        </div>
+        <div style="text-align:center;padding:16px;background:var(--surface2);border-radius:10px;border:1px solid var(--border)">
+          <div style="font-size:24px;margin-bottom:8px">🛡️</div>
+          <div style="font-size:12px;font-weight:700;margin-bottom:4px">Circuit Breaker Recovery</div>
+          <div style="font-size:11px;color:var(--muted)">Each agent has its own circuit breaker. If failures spike, the circuit opens to prevent cascading failures.</div>
+        </div>
+        <div style="text-align:center;padding:16px;background:var(--surface2);border-radius:10px;border:1px solid var(--border)">
+          <div style="font-size:24px;margin-bottom:8px">📋</div>
+          <div style="font-size:12px;font-weight:700;margin-bottom:4px">Full Audit Trail</div>
+          <div style="font-size:11px;color:var(--muted)">Every decision, confidence score, and state change is logged immutably for compliance and traceability.</div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ══════════════════════════════════════════════ PIPELINE ══ -->
@@ -1538,6 +1716,36 @@ Account Manager — Lisa Fernandez: We're off to a great start. Looking forward 
 
     btn.disabled = false;
     btn.classList.remove('running');
+  }
+
+  /* ── ANIMATED DEMO PIPELINE ── */
+  function startDemo(){
+    const btn=document.getElementById('demo-btn');
+    btn.disabled=true; btn.innerHTML='&#9203; Running...';
+    for(let i=1;i<=6;i++){const n=document.getElementById('dn-'+i);n.className='demo-node';n.querySelector('.demo-node-status').textContent='Idle';}
+    for(let i=1;i<=5;i++){document.getElementById('dc-'+i).className='demo-connector';}
+    document.getElementById('demo-results').className='demo-results';
+    const steps=[
+      {d:0,t:1000},{d:1200,t:900,c:1},{d:2300,t:900,c:2},
+      {d:3400,t:800,c:3},{d:4400,t:700,c:4},{d:5300,t:700,c:5}
+    ];
+    steps.forEach((s,i)=>{
+      setTimeout(()=>{
+        if(s.c)document.getElementById('dc-'+s.c).classList.add('active');
+        const n=document.getElementById('dn-'+(i+1));
+        n.classList.add('processing');
+        n.querySelector('.demo-node-status').textContent=['Analyzing...','Extracting...','Extracting...','Prioritizing...','Assigning...','Evaluating...'][i];
+      },s.d);
+      setTimeout(()=>{
+        const n=document.getElementById('dn-'+(i+1));
+        n.classList.remove('processing');n.classList.add('complete');
+        n.querySelector('.demo-node-status').textContent='Complete';
+      },s.d+s.t);
+    });
+    setTimeout(()=>{
+      document.getElementById('demo-results').classList.add('visible');
+      btn.disabled=false;btn.innerHTML='&#8635; Replay Demo';
+    },6200);
   }
 </script>
 </body>
