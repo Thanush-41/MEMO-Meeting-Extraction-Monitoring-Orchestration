@@ -362,11 +362,11 @@
       .grid-2, .grid-3, .grid-4, .cb-grid, .step-cards { grid-template-columns: 1fr !important; }
       .demo-result-items { grid-template-columns: repeat(2, 1fr) !important; }
       .page { padding: 16px 12px; }
-      .pipeline { flex-wrap: nowrap !important; overflow-x: auto !important; padding: 14px 12px; justify-content: flex-start !important; -webkit-overflow-scrolling: touch; }
+      .pipeline { flex-wrap: wrap !important; justify-content: center !important; gap: 10px; padding: 14px 12px; }
       .pipeline-step { min-width: 90px; }
       .pipeline-step .icon { width: 44px; height: 44px; font-size: 18px; border-radius: 10px; }
       .pipeline-step .step-name { font-size: 10px; }
-      .pipeline-arrow { font-size: 16px; padding: 0 2px; }
+      .pipeline-arrow { display: none; }
       .card { padding: 14px; }
       .card-value { font-size: 26px; }
 
@@ -379,12 +379,12 @@
       .nav-tabs button { padding: 5px 10px; font-size: 11px; }
 
       /* Demo pipeline mobile */
-      .demo-flow { padding: 12px 0; -webkit-overflow-scrolling: touch; }
-      .demo-node { min-width: 105px; }
+      .demo-flow { flex-wrap: wrap !important; justify-content: center !important; gap: 12px; padding: 12px 0; }
+      .demo-node { min-width: 100px; }
       .demo-node-icon { width: 48px; height: 48px; font-size: 20px; border-radius: 12px; }
       .demo-node-label { font-size: 8px; }
       .demo-node-name { font-size: 9px; }
-      .demo-connector { width: 24px; }
+      .demo-connector { display: none; }
       .demo-input-box { font-size: 10px; padding: 10px 12px; line-height: 1.6; }
       .demo-header { flex-direction: column; align-items: stretch; gap: 10px; }
       .demo-run { width: 100%; justify-content: center; padding: 10px 18px; }
@@ -393,7 +393,7 @@
 
       /* Tables - horizontal scroll */
       .data-table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-      .data-table th, .data-table td { white-space: nowrap; padding: 8px 10px; font-size: 12px; }
+      .data-table th, .data-table td { white-space: normal; padding: 8px 8px; font-size: 11px; word-break: break-word; }
 
       /* Upload panel */
       .upload-panel, .results-panel { padding: 14px; }
@@ -417,6 +417,9 @@
 
       /* AgentInfo cards */
       .info-grid, .usecase-grid { grid-template-columns: 1fr !important; }
+      [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+      .demo-container { overflow: visible !important; }
+      .card { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     }
 
     @media (max-width: 480px) {
