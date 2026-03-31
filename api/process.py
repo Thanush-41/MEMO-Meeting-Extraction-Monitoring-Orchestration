@@ -19,6 +19,7 @@ from src.agents.extraction.action_item_agent import ActionItemExtractor, ActionI
 from src.agents.decision.task_prioritizer import TaskPrioritizer, PrioritizationInput
 from src.agents.decision.owner_assigner import OwnerAssigner, OwnerAssignmentInput, TeamMember
 from src.agents.decision.escalation_decider import EscalationDecider, EscalationInput
+from src.agents.ai.gemini_enrichment import GeminiEnrichmentAgent, GeminiEnrichmentInput
 
 
 async def run_full_pipeline(transcript_text: str, participants: list, participant_roles: dict) -> dict:
@@ -117,6 +118,49 @@ async def run_full_pipeline(transcript_text: str, participants: list, participan
         }
     })
 
+    # ── Step 3.5: AI Enrichment (Gemini)
+    ai_step = None
+    ai_data = {}
+    try:
+        t0 = datetime.now()
+        ai_agent = GeminiEnrichmentAgent()
+        ai_result = await ai_agent.execute(
+            GeminiEnrichmentInput(
+                transcript_text=transcript_text,
+                transcript_analysis=t_result.data or {},
+                decisions=decisions,
+                action_items=action_items,
+            ),
+            ctx(7)
+        )
+        if ai_result.success and ai_result.data:
+            ai_data = ai_result.data
+            # Merge AI-discovered items into the pipeline
+            missed_actions = ai_data.get("missed_action_items", [])
+            missed_decisions = ai_data.get("missed_decisions", [])
+            action_items = ai_data.get("enriched_action_items", action_items)
+            decisions = ai_data.get("enriched_decisions", decisions)
+
+        ai_step = {
+            "agent": "GeminiEnrichmentAgent",
+            "success": ai_result.success,
+            "confidence": round(ai_result.confidence * 100, 1),
+            "duration_ms": int((datetime.now() - t0).total_seconds() * 1000),
+            "output": {
+                "ai_summary": ai_data.get("ai_summary", ""),
+                "missed_decisions": len(ai_data.get("missed_decisions", [])),
+                "missed_action_items": len(ai_data.get("missed_action_items", [])),
+                "risks": ai_data.get("risks_identified", []),
+                "sentiment": ai_data.get("sentiment_analysis", {}),
+                "key_insights": ai_data.get("key_insights", []),
+            }
+        }
+    except Exception:
+        ai_step = None
+
+    if ai_step:
+        steps.append(ai_step)
+
     # ── Step 4: Prioritization
     t0 = datetime.now()
     p_agent = TaskPrioritizer()
@@ -212,10 +256,21 @@ async def run_full_pipeline(transcript_text: str, participants: list, participan
             "action_items": steps[2]["output"]["total"],
             "assigned": steps[2]["output"]["assigned"],
             "with_deadlines": steps[2]["output"]["with_deadlines"],
-            "priority_counts": steps[3]["output"]["priority_counts"],
+            "priority_counts": steps[3 if not ai_step else 4]["output"]["priority_counts"],
             "escalations": len(escalations),
             "top_action_items": steps[2]["output"]["items"],
-            "top_assignments": steps[4]["output"]["assignments"],
+            "top_assignments": steps[4 if not ai_step else 5]["output"]["assignments"],
+            "ai_enrichment": {
+                "enabled": ai_step is not None and ai_step.get("success", False),
+                "ai_summary": ai_data.get("ai_summary", ""),
+                "missed_decisions": ai_data.get("missed_decisions", []),
+                "missed_action_items": ai_data.get("missed_action_items", []),
+                "risks": ai_data.get("risks_identified", []),
+                "sentiment": ai_data.get("sentiment_analysis", {}),
+                "key_insights": ai_data.get("key_insights", []),
+                "total_decisions_with_ai": len(decisions),
+                "total_actions_with_ai": len(action_items),
+            }
         }
     }
 

@@ -122,6 +122,8 @@ class TranscriptAnalyzer(BaseAgent[TranscriptInput]):
         context: AgentContext
     ) -> AgentResult:
         """Analyze the transcript and extract structured information."""
+        if isinstance(input_data, dict):
+            input_data = TranscriptInput(**input_data)
         
         self._log_audit_event(
             event_type="transcript_analysis_start",

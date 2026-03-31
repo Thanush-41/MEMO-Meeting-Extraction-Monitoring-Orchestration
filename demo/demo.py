@@ -30,6 +30,7 @@ from src.agents.extraction.action_item_agent import ActionItemExtractor, ActionI
 from src.agents.decision.task_prioritizer import TaskPrioritizer, PrioritizationInput
 from src.agents.decision.owner_assigner import OwnerAssigner, OwnerAssignmentInput, TeamMember
 from src.agents.decision.escalation_decider import EscalationDecider, EscalationInput
+from src.agents.ai.gemini_enrichment import GeminiEnrichmentAgent, GeminiEnrichmentInput
 
 from src.workflows.meeting_intelligence import (
     create_meeting_intelligence_workflow,
@@ -182,6 +183,62 @@ async def demo_individual_agents():
     
     action_items_data = result.data
     
+    # 3.5 AI Enrichment (Gemini)
+    print("\n>>> Step 3.5: AI Enrichment (Gemini)")
+    print("-" * 40)
+    
+    import os
+    if os.environ.get("GEMINI_API_KEY"):
+        ai_agent = GeminiEnrichmentAgent()
+        ai_input = GeminiEnrichmentInput(
+            transcript_text=SAMPLE_TRANSCRIPT,
+            transcript_analysis=transcript_analysis,
+            decisions=decisions_data.get("decisions", []),
+            action_items=action_items_data.get("action_items", [])
+        )
+        
+        context.step_number = 35
+        result = await ai_agent.execute(ai_input, context)
+        print(f"Success: {result.success}")
+        print(f"Confidence: {result.confidence:.2%}")
+        if result.error:
+            print(f"Error: {result.error}")
+        
+        if result.data:
+            print(f"\nAI Summary: {result.data.get('ai_summary', '')[:200]}...")
+            missed_d = result.data.get("missed_decisions", [])
+            missed_a = result.data.get("missed_action_items", [])
+            risks = result.data.get("risks_identified", [])
+            insights = result.data.get("key_insights", [])
+            sentiment = result.data.get("sentiment_analysis", {})
+            
+            print(f"\nMissed decisions found by AI: {len(missed_d)}")
+            for d in missed_d:
+                print(f"  - {d.get('description', '')[:60]}")
+            
+            print(f"\nMissed action items found by AI: {len(missed_a)}")
+            for a in missed_a:
+                print(f"  - [{a.get('urgency', 'normal')}] {a.get('title', '')[:50]} -> {a.get('assignee', '?')}")
+            
+            print(f"\nRisks identified: {len(risks)}")
+            for r in risks:
+                print(f"  - [{r.get('severity', '?')}] {r.get('risk', '')[:60]}")
+            
+            print(f"\nSentiment: {sentiment.get('overall', 'N/A')}")
+            
+            print(f"\nKey Insights:")
+            for insight in insights:
+                print(f"  • {insight[:80]}")
+            
+            # Show enriched totals
+            enriched_d = result.data.get("enriched_decisions", [])
+            enriched_a = result.data.get("enriched_action_items", [])
+            print(f"\nTotal decisions (rule + AI): {len(enriched_d)}")
+            print(f"Total action items (rule + AI): {len(enriched_a)}")
+    else:
+        print("  GEMINI_API_KEY not set — skipping AI enrichment")
+        print("  Set it with: $env:GEMINI_API_KEY = 'your-key'")
+    
     # 4. Task Prioritization
     print("\n>>> Step 4: Task Prioritization")
     print("-" * 40)
@@ -241,13 +298,15 @@ async def demo_workflow_engine():
         "TaskPrioritizer": TaskPrioritizer,
         "OwnerAssigner": OwnerAssigner,
         "EscalationDecider": EscalationDecider,
+        "GeminiEnrichmentAgent": GeminiEnrichmentAgent,
     })
     
     # Create workflow
     config = MeetingIntelligenceConfig(
         auto_assign_owners=True,
         auto_prioritize=True,
-        check_escalations=True
+        check_escalations=True,
+        enable_ai_enrichment=bool(os.environ.get("GEMINI_API_KEY"))
     )
     workflow = create_meeting_intelligence_workflow(config)
     
@@ -336,6 +395,19 @@ async def demo_workflow_engine():
         print(f"  Assigned: {aggregated.assigned_count}")
         print(f"  Escalations: {aggregated.escalation_count}")
         print(f"  Avg Confidence: {aggregated.avg_confidence:.2%}")
+        
+        if aggregated.ai_summary:
+            print(f"\n  AI Summary: {aggregated.ai_summary[:200]}...")
+        if aggregated.ai_missed_decisions:
+            print(f"  AI found {aggregated.ai_missed_decisions} additional decisions")
+        if aggregated.ai_missed_action_items:
+            print(f"  AI found {aggregated.ai_missed_action_items} additional action items")
+        if aggregated.risks_identified:
+            print(f"  Risks: {len(aggregated.risks_identified)}")
+        if aggregated.key_insights:
+            print(f"  Key Insights:")
+            for insight in aggregated.key_insights:
+                print(f"    • {insight[:80]}")
         
         if aggregated.items_needing_review:
             print(f"  Items needing review: {len(aggregated.items_needing_review)}")

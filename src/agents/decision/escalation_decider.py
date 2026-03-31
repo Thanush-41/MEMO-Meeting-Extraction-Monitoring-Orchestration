@@ -133,6 +133,8 @@ class EscalationDecider(BaseAgent[EscalationInput]):
         context: AgentContext
     ) -> AgentResult:
         """Analyze items and determine escalation needs."""
+        if isinstance(input_data, dict):
+            input_data = EscalationInput(**input_data)
         
         self._log_audit_event(
             event_type="escalation_analysis_start",

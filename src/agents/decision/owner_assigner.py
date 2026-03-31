@@ -114,6 +114,8 @@ class OwnerAssigner(BaseAgent[OwnerAssignmentInput]):
         context: AgentContext
     ) -> AgentResult:
         """Assign owners to tasks."""
+        if isinstance(input_data, dict):
+            input_data = OwnerAssignmentInput(**input_data)
         
         self._log_audit_event(
             event_type="owner_assignment_start",

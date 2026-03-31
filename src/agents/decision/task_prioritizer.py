@@ -114,6 +114,8 @@ class TaskPrioritizer(BaseAgent[PrioritizationInput]):
         context: AgentContext
     ) -> AgentResult:
         """Prioritize action items."""
+        if isinstance(input_data, dict):
+            input_data = PrioritizationInput(**input_data)
         
         self._log_audit_event(
             event_type="prioritization_start",

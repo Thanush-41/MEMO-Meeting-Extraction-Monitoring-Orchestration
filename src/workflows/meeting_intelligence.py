@@ -26,6 +26,7 @@ class MeetingIntelligenceConfig(BaseModel):
     auto_prioritize: bool = True
     check_escalations: bool = True
     generate_summary: bool = True
+    enable_ai_enrichment: bool = True
     confidence_threshold: float = 0.6
 
 
@@ -96,17 +97,52 @@ def create_meeting_intelligence_workflow(
         ),
     ]
     
+    # Optional: AI Enrichment (Gemini) — finds missed decisions/actions
+    if config.enable_ai_enrichment:
+        steps.append(WorkflowStep(
+            id="ai_enrichment",
+            name="AI Enrichment (Gemini)",
+            description="Use Gemini AI to find implicit decisions, missed action items, risks, and sentiment",
+            agent_type="GeminiEnrichmentAgent",
+            depends_on=["analyze_transcript", "extract_decisions", "extract_actions"],
+            input_mapping={
+                "transcript_text": "input.transcript",
+                "transcript_analysis": "shared.transcript_analysis",
+                "decisions": "shared.decisions.decisions",
+                "action_items": "shared.action_items.action_items"
+            },
+            output_key="ai_enrichment",
+            timeout_seconds=120.0,
+            retry_policy=RetryPolicy(max_retries=2),
+            continue_on_failure=True  # AI is optional — don't block pipeline
+        ))
+
     # Optional: Prioritize tasks
     if config.auto_prioritize:
+        # Use AI-enriched items if available, otherwise fall back to rule-based
+        action_items_path = (
+            "shared.ai_enrichment.enriched_action_items"
+            if config.enable_ai_enrichment
+            else "shared.action_items.action_items"
+        )
+        decisions_path = (
+            "shared.ai_enrichment.enriched_decisions"
+            if config.enable_ai_enrichment
+            else "shared.decisions.decisions"
+        )
+        prioritize_depends = ["extract_actions", "extract_decisions"]
+        if config.enable_ai_enrichment:
+            prioritize_depends.append("ai_enrichment")
+
         steps.append(WorkflowStep(
             id="prioritize_tasks",
             name="Prioritize Tasks",
             description="Assign priorities to action items",
             agent_type="TaskPrioritizer",
-            depends_on=["extract_actions", "extract_decisions"],
+            depends_on=prioritize_depends,
             input_mapping={
-                "action_items": "shared.action_items.action_items",
-                "decisions": "shared.decisions.decisions",
+                "action_items": action_items_path,
+                "decisions": decisions_path,
                 "business_priorities": "input.business_priorities"
             },
             output_key="prioritized_items",
@@ -180,6 +216,7 @@ class MeetingIntelligenceResult(BaseModel):
     
     # Extracted data
     summary: str = ""
+    ai_summary: str = ""
     speakers: List[Dict[str, Any]] = Field(default_factory=list)
     topics: List[Dict[str, Any]] = Field(default_factory=list)
     
@@ -197,6 +234,13 @@ class MeetingIntelligenceResult(BaseModel):
     # Escalations
     escalations: List[Dict[str, Any]] = Field(default_factory=list)
     escalation_count: int = 0
+    
+    # AI enrichment
+    risks_identified: List[Dict[str, Any]] = Field(default_factory=list)
+    sentiment_analysis: Dict[str, Any] = Field(default_factory=dict)
+    key_insights: List[str] = Field(default_factory=list)
+    ai_missed_decisions: int = 0
+    ai_missed_action_items: int = 0
     
     # Quality metrics
     avg_confidence: float = 0.0
@@ -216,19 +260,26 @@ def aggregate_workflow_results(
     prioritized_data = workflow_output.get("prioritized_items", {})
     assignments_data = workflow_output.get("assignments", {})
     escalations_data = workflow_output.get("escalations", {})
+    ai_enrichment_data = workflow_output.get("ai_enrichment", {})
     
     # Build result
     result = MeetingIntelligenceResult(
         execution_id=workflow_output.get("execution_id", ""),
         meeting_title=transcript_analysis.get("meeting_title"),
         summary=transcript_analysis.get("summary", ""),
+        ai_summary=ai_enrichment_data.get("ai_summary", ""),
         speakers=transcript_analysis.get("speakers", []),
         topics=transcript_analysis.get("topics", []),
-        decisions=decisions_data.get("decisions", []),
-        decision_count=decisions_data.get("total_found", 0),
-        action_items=action_items_data.get("action_items", []),
-        action_item_count=action_items_data.get("total_found", 0),
+        decisions=ai_enrichment_data.get("enriched_decisions", decisions_data.get("decisions", [])),
+        decision_count=len(ai_enrichment_data.get("enriched_decisions", decisions_data.get("decisions", []))),
+        action_items=ai_enrichment_data.get("enriched_action_items", action_items_data.get("action_items", [])),
+        action_item_count=len(ai_enrichment_data.get("enriched_action_items", action_items_data.get("action_items", []))),
         assigned_count=action_items_data.get("assigned_count", 0),
+        risks_identified=ai_enrichment_data.get("risks_identified", []),
+        sentiment_analysis=ai_enrichment_data.get("sentiment_analysis", {}),
+        key_insights=ai_enrichment_data.get("key_insights", []),
+        ai_missed_decisions=len(ai_enrichment_data.get("missed_decisions", [])),
+        ai_missed_action_items=len(ai_enrichment_data.get("missed_action_items", [])),
     )
     
     # Add prioritization data

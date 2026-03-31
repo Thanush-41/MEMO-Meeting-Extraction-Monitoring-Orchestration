@@ -139,6 +139,8 @@ class ActionItemExtractor(BaseAgent[ActionItemExtractionInput]):
         context: AgentContext
     ) -> AgentResult:
         """Extract action items from transcript analysis."""
+        if isinstance(input_data, dict):
+            input_data = ActionItemExtractionInput(**input_data)
         
         self._log_audit_event(
             event_type="action_extraction_start",

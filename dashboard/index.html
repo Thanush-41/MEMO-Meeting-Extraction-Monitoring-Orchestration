@@ -745,6 +745,28 @@ Alice: Agreed. Bob, please have a plan ready by Friday."></textarea>
       <table class="data-table"><thead><tr><th>Item</th><th>Reason</th></tr></thead>
       <tbody id="res-escalations-body"></tbody></table>
     </div>
+
+    <!-- AI Enrichment Results -->
+    <div id="res-ai-wrap" style="margin-top:20px;display:none">
+      <div class="section-title" style="font-size:13px;margin-bottom:12px;color:var(--purple)">
+        <span class="dot" style="background:var(--purple)"></span>🤖 AI Enrichment (Gemini)
+      </div>
+      <div id="res-ai-summary" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:13px;color:var(--text);line-height:1.7;margin-bottom:14px;display:none"></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px" id="res-ai-chips"></div>
+      <div id="res-ai-risks-wrap" style="display:none;margin-bottom:14px">
+        <div style="font-size:12px;font-weight:600;color:var(--warn);margin-bottom:8px">⚠ Risks Identified</div>
+        <div id="res-ai-risks"></div>
+      </div>
+      <div id="res-ai-insights-wrap" style="display:none;margin-bottom:14px">
+        <div style="font-size:12px;font-weight:600;color:var(--accent);margin-bottom:8px">💡 Key Insights</div>
+        <div id="res-ai-insights"></div>
+      </div>
+      <div id="res-ai-missed-wrap" style="display:none">
+        <div style="font-size:12px;font-weight:600;color:var(--accent2);margin-bottom:8px">🔍 AI-Discovered Items (Missed by Rules)</div>
+        <table class="data-table"><thead><tr><th>Type</th><th>Description</th><th>Who</th></tr></thead>
+        <tbody id="res-ai-missed-body"></tbody></table>
+      </div>
+    </div>
   </div>
 
   <hr style="border:none;border-top:1px solid var(--border);margin:4px 0 22px">
@@ -1631,12 +1653,14 @@ Account Manager — Lisa Fernandez: We're off to a great start. Looking forward 
     const summary = data.summary || {};
 
     /* ── stat chips (use actual API field names) ── */
+    const aiEnrich = summary.ai_enrichment || {};
     const chips = [
       { val: summary.speakers  || 0, lbl: 'Speakers' },
-      { val: summary.decisions || 0, lbl: 'Decisions' },
-      { val: summary.action_items || 0, lbl: 'Action Items' },
+      { val: aiEnrich.enabled ? (aiEnrich.total_decisions_with_ai || summary.decisions || 0) : (summary.decisions || 0), lbl: aiEnrich.enabled ? 'Decisions (AI+Rules)' : 'Decisions' },
+      { val: aiEnrich.enabled ? (aiEnrich.total_actions_with_ai || summary.action_items || 0) : (summary.action_items || 0), lbl: aiEnrich.enabled ? 'Actions (AI+Rules)' : 'Action Items' },
       { val: summary.escalations  || 0, lbl: 'Escalations' },
       { val: steps.length,            lbl: 'Agents Run' },
+      { val: aiEnrich.enabled ? '✓' : '✗', lbl: 'AI Enrichment' },
     ];
     document.getElementById('res-chips').innerHTML = chips
       .map(c => `<div class="stat-chip"><div class="chip-val">${c.val}</div><div class="chip-lbl">${c.lbl}</div></div>`)
@@ -1647,6 +1671,7 @@ Account Manager — Lisa Fernandez: We're off to a great start. Looking forward 
       TranscriptAnalyzer: '📝 Transcript Analyzer',
       DecisionExtractor:  '🔍 Decision Extractor',
       ActionItemExtractor:'📋 Action Item Extractor',
+      GeminiEnrichmentAgent: '🤖 AI Enrichment',
       TaskPrioritizer:    '🎯 Task Prioritizer',
       OwnerAssigner:      '👤 Owner Assigner',
       EscalationDecider:  '⚠ Escalation Decider',
@@ -1665,7 +1690,9 @@ Account Manager — Lisa Fernandez: We're off to a great start. Looking forward 
       else if (s.agent === 'TaskPrioritizer') {
         const pc = out.priority_counts || {};
         detail = Object.entries(pc).filter(([,v])=>v>0).map(([k,v])=>`${v}×${k}`).join(' · ') || 'prioritized';
-      } else if (s.agent === 'OwnerAssigner')
+      } else if (s.agent === 'GeminiEnrichmentAgent')
+        detail = `+${out.missed_decisions || 0} decisions · +${out.missed_action_items || 0} actions · ${(out.risks||[]).length} risks`;
+      else if (s.agent === 'OwnerAssigner')
         detail = `${out.assigned || 0} items assigned`;
       else if (s.agent === 'EscalationDecider')
         detail = `${out.total_escalations || 0} escalations`;
@@ -1711,6 +1738,68 @@ Account Manager — Lisa Fernandez: We're off to a great start. Looking forward 
       escWrap.style.display = 'block';
     } else {
       escWrap.style.display = 'none';
+    }
+
+    /* ── AI Enrichment section ── */
+    const ai = summary.ai_enrichment || {};
+    const aiWrap = document.getElementById('res-ai-wrap');
+    if (ai.enabled) {
+      aiWrap.style.display = 'block';
+
+      // AI summary
+      const aiSumEl = document.getElementById('res-ai-summary');
+      if (ai.ai_summary) {
+        aiSumEl.textContent = ai.ai_summary;
+        aiSumEl.style.display = 'block';
+      } else {
+        aiSumEl.style.display = 'none';
+      }
+
+      // AI stat chips
+      document.getElementById('res-ai-chips').innerHTML = [
+        { val: ai.total_decisions_with_ai || 0, lbl: 'Total Decisions', color: 'var(--purple)' },
+        { val: ai.total_actions_with_ai || 0, lbl: 'Total Actions', color: 'var(--purple)' },
+        { val: (ai.missed_decisions || []).length, lbl: 'AI Found (Decisions)', color: 'var(--accent2)' },
+        { val: (ai.missed_action_items || []).length, lbl: 'AI Found (Actions)', color: 'var(--accent2)' },
+      ].map(c => `<div class="stat-chip"><div class="chip-val" style="color:${c.color}">${c.val}</div><div class="chip-lbl">${c.lbl}</div></div>`).join('');
+
+      // Risks
+      const risks = ai.risks || [];
+      const risksWrap = document.getElementById('res-ai-risks-wrap');
+      if (risks.length) {
+        risksWrap.style.display = 'block';
+        document.getElementById('res-ai-risks').innerHTML = risks.map(r => {
+          const sevColor = r.severity === 'high' ? 'var(--error)' : r.severity === 'medium' ? 'var(--warn)' : 'var(--muted)';
+          return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:6px;display:flex;align-items:center;gap:10px">
+            <span style="font-size:10px;font-weight:700;color:${sevColor};text-transform:uppercase;min-width:50px">${escHtml(r.severity||'?')}</span>
+            <span style="font-size:12px;flex:1">${escHtml(r.risk||r.description||'')}</span>
+            <span style="font-size:11px;color:var(--muted)">${escHtml(r.raised_by||'')}</span>
+          </div>`;
+        }).join('');
+      } else { risksWrap.style.display = 'none'; }
+
+      // Key insights
+      const insights = ai.key_insights || [];
+      const insWrap = document.getElementById('res-ai-insights-wrap');
+      if (insights.length) {
+        insWrap.style.display = 'block';
+        document.getElementById('res-ai-insights').innerHTML = insights.map(i =>
+          `<div style="background:var(--surface2);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;padding:8px 14px;margin-bottom:6px;font-size:12px;color:var(--text)">${escHtml(i)}</div>`
+        ).join('');
+      } else { insWrap.style.display = 'none'; }
+
+      // Missed items table
+      const missedD = ai.missed_decisions || [];
+      const missedA = ai.missed_action_items || [];
+      const missedWrap = document.getElementById('res-ai-missed-wrap');
+      if (missedD.length || missedA.length) {
+        missedWrap.style.display = 'block';
+        const rows = missedD.map(d => `<tr><td><span class="badge-p2">Decision</span></td><td>${escHtml(d.description||'')}</td><td>${escHtml(d.made_by||'')}</td></tr>`)
+          .concat(missedA.map(a => `<tr><td><span class="badge-p1">Action</span></td><td>${escHtml(a.title||'')}</td><td>${escHtml(a.assignee||'')}</td></tr>`));
+        document.getElementById('res-ai-missed-body').innerHTML = rows.join('');
+      } else { missedWrap.style.display = 'none'; }
+    } else {
+      aiWrap.style.display = 'none';
     }
 
     panel.classList.add('visible');
@@ -1779,6 +1868,17 @@ Account Manager — Lisa Fernandez: We're off to a great start. Looking forward 
       log('info',     `   Action items: ${s.action_items} (${s.assigned} assigned, ${s.with_deadlines} with deadlines)`);
       log('info',     `   Priorities — P0:${pc.P0||0} P1:${pc.P1||0} P2:${pc.P2||0} P3:${pc.P3||0}`);
       if (s.escalations > 0) log('warn', `   ⚠ ${s.escalations} escalation(s) triggered`);
+
+      // Show AI enrichment info
+      const aiE = s.ai_enrichment || {};
+      if (aiE.enabled) {
+        log('decision', `🤖 AI Enrichment (Gemini):`);
+        log('info',     `   Total decisions (rules+AI): ${aiE.total_decisions_with_ai}`);
+        log('info',     `   Total actions (rules+AI): ${aiE.total_actions_with_ai}`);
+        log('info',     `   AI found: +${(aiE.missed_decisions||[]).length} decisions, +${(aiE.missed_action_items||[]).length} actions`);
+        if ((aiE.risks||[]).length) log('warn', `   ⚠ ${aiE.risks.length} risk(s) identified by AI`);
+        if (aiE.ai_summary) log('info', `   Summary: ${aiE.ai_summary}`);
+      }
 
       // Populate result cards
       document.getElementById('sim-decisions').textContent = s.decisions;

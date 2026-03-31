@@ -123,6 +123,8 @@ class DecisionExtractor(BaseAgent[DecisionExtractionInput]):
         context: AgentContext
     ) -> AgentResult:
         """Extract decisions from transcript analysis."""
+        if isinstance(input_data, dict):
+            input_data = DecisionExtractionInput(**input_data)
         
         self._log_audit_event(
             event_type="decision_extraction_start",
